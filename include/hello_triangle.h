@@ -7,7 +7,8 @@
 
 #include <vector>
 #include <optional>
-#include <SDL2/SDL.h>
+#include <SDL.h>
+
 #include <vulkan/vulkan.h>
 
 class HelloTriangleApplication {

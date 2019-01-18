@@ -17,12 +17,17 @@ set(SDL_DIR ${EXTERNAL_DIR}/SDL2-${SDL_VERSION}/)
 set(SDL_STATIC ON)
 set(SDL_SHARED OFF)
 add_subdirectory(${SDL_DIR})
-include_directories(${SDL2_BINARY_DIR}/include ${SDL2_SOURCE_DIR}/include)
+include_directories(${SDL2_DIR}/include)
 LIST(APPEND PROJECT_LIBRARIES
         SDL2-static)
+if(MSVC)
+LIST(APPEND PROJECT_LIBRARIES
+        SDL2main)
+endif(MSVC)
 
 #VULKAN
 find_package(Vulkan)
+include_directories(${Vulkan_INCLUDE_DIRS})
 LIST(APPEND PROJECT_LIBRARIES ${Vulkan_LIBRARY})
 
 #Main

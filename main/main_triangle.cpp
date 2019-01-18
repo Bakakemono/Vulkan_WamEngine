@@ -2,7 +2,12 @@
 #include <stdexcept>
 #include <hello_triangle.h>
 
-int main() {
+#ifdef WIN32
+#include "SDL.h"
+#endif
+
+
+int main(int argc, char **argv) {
   HelloTriangleApplication app;
 
   try {
