@@ -8,12 +8,10 @@
 
 
 int main(int argc, char **argv) {
-  HelloTriangleApplication app;
+  BasicVulkanApp app;
 
   try {
-      app.init();
-      app.mainLoop ();
-      app.cleanup ();
+	  app.run();
     } catch (const std::exception& e) {
       std::cerr << e.what() << std::endl;
       return EXIT_FAILURE;
