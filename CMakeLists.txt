@@ -53,6 +53,29 @@ LIST(APPEND PROJECT_LIBRARIES
         SDL2main)
 endif(MSVC)
 
+#assimp
+set(BUILD_SHARED_LIBS FALSE CACHE INTERNAL "")
+set(ASSIMP_BUILD_ASSIMP_TOOLS FALSE CACHE INTERNAL "")
+set(ASSIMP_BUILD_SAMPLES FALSE CACHE INTERNAL "")
+set(ASSIMP_BUILD_TESTS FALSE CACHE INTERNAL "")
+set(ASSIMP_NO_EXPORT TRUE CACHE INTERNAL "")
+set(ASSIMP_DIR ${EXTERNAL_DIR}/assimp)
+include_directories(${ASSIMP_DIR}/include ${CMAKE_BINARY_DIR}/externals/assimp/include)
+add_subdirectory(${ASSIMP_DIR})
+LIST(APPEND PROJECT_LIBRARIES
+			assimp)
+
+#GLM
+set(GLM_DIR ${EXTERNAL_DIR}/glm)
+IF(NOT EXISTS ${GLM_DIR})
+message(FATAL_ERROR "Please do git submodule update --init --recursive")
+ENDIF()
+include_directories(${GLM_DIR})
+
+#stb_image
+set(STB_DIR ${EXTERNAL_DIR}/stb_image/stb_image.h)
+include_directories(${STB_DIR})
+
 #VULKAN
 find_package(Vulkan)
 include_directories(${Vulkan_INCLUDE_DIRS})

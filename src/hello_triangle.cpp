@@ -765,7 +765,7 @@ bool BasicVulkanApp::isDeviceSuitable(VkPhysicalDevice device) {
 		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 	}
 
-	return indices.isComplete() && extensionsSupported && swapChainAdequate;
+	return indices.IsComplete() && extensionsSupported && swapChainAdequate;
 }
 
 bool BasicVulkanApp::checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -806,7 +806,7 @@ QueueFamilyIndices BasicVulkanApp::findQueueFamilies(VkPhysicalDevice device) {
 			indices.presentFamily = i;
 		}
 
-		if (indices.isComplete()) {
+		if (indices.IsComplete()) {
 			break;
 		}
 
