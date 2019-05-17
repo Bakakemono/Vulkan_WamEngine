@@ -11,7 +11,7 @@ public:
 	bool ImportModel(const char* path);
 
 private:
-	std::string modelPath;
+
 };
 
 #endif

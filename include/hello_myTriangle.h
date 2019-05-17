@@ -5,8 +5,6 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
-#include <SDL_mouse.h>
-#include <SDL_keyboard.h>
 
 #include <vulkan/vulkan.h>
 
@@ -23,6 +21,8 @@
 #include <vk_utils.h>
 #include <array>
 #include <map>
+
+#include <input..h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -141,7 +141,11 @@ struct SwapChainSupportDetails
 const int HEIGHT = 600;
 const int WIDTH = 800;
 
-const std::string MODEL_PATH = "models/cubic.obj";
+const int SCREEN_CENTER_X = 767;
+const int SCREEN_CENTER_Y = 431;
+
+
+const std::string MODEL_PATH = "models/Mountain.obj";
 const std::string TEXTURE_PATH = "textures/cube.png";
 
 const std::vector<const char*> validationLayers =
@@ -383,12 +387,12 @@ private:
 	float dt;
 	float lastFrame = 0;
 
-	float lastX = 0;
-	float lastY = 0;
-	bool mouseFirstMove = true;
-
 	float yaw = 0;
 	float pitch = 0;
+
+	InputManager inputManager;
+
+	bool quit = false;
 
 };
 #endif

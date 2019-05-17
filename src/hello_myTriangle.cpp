@@ -67,11 +67,13 @@ void GreatView::initVulkan()
 
 void GreatView::mainLoop()
 {
-	// Main loop flag
-	bool quit = false;
-
 	while (!quit)
 	{
+		if(inputManager.GetButton(SDLK_ESCAPE))
+		{
+			quit = true;
+		}
+
 		// Handle events on queue
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -282,46 +284,35 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 
 	POINT p;
 	GetCursorPos(&p);
-	//ShowCursor(FALSE);
-	//SetCursorPos(960, 540);
-
-	if (mouseFirstMove)
-	{
-		lastX = p.x;
-		lastY = p.y;
-		mouseFirstMove = false;
-	}
+	ShowCursor(FALSE);
 		
 	cameraSpeed = 2.5f * dt;
-	if(isKeyDown)
-	{
-		if(e.key.keysym.sym == SDLK_UP)
-		{
-			cameraPos += cameraSpeed * cameraFront;
-		}
-		if (e.key.keysym.sym == SDLK_DOWN)
-		{
-			cameraPos -= cameraSpeed * cameraFront;
-		}
-		if (e.key.keysym.sym == SDLK_LEFT)
-		{
-			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
-		if (e.key.keysym.sym == SDLK_RIGHT)
-		{
-			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-		}
-	}
-	std::cout << p.x << " / " << p.y << "\n";
 
-	float xOffset = p.x - lastX;
-	float yOffset = -p.y + lastY;
-	lastX = p.x;
-	lastY = p.y;
+	if(inputManager.GetButton(SDLK_w))
+	{
+		cameraPos += cameraSpeed * cameraFront;
+	}
+	if (inputManager.GetButton(SDLK_s))
+	{
+		cameraPos -= cameraSpeed * cameraFront;
+	}
+	if (inputManager.GetButton(SDLK_a))
+	{
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	}
+	if (inputManager.GetButton(SDLK_d))
+	{
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+	}
+
+	float xOffset =  p.x - SCREEN_CENTER_X;
+	float yOffset = -p.y + SCREEN_CENTER_Y;
 
 	float sensivity = 0.5f;
 	xOffset *= sensivity;
 	yOffset *= sensivity;
+
+	SetCursorPos(SCREEN_CENTER_X, SCREEN_CENTER_Y);
 
 	yaw += xOffset;
 	pitch += yOffset;
@@ -343,21 +334,23 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 	
 	//FUN HERE
 
-	//static auto startTime = std::chrono::high_resolution_clock::now();
-	//auto currentTime = std::chrono::high_resolution_clock::now();
-	//float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+	static auto startTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	UniformBufferObject ubo = {};
 	//ubo.model = glm::rotate(glm:: (1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 1.0f));
 	//ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(2.0, 2.0, 2.0));
 	ubo.model = glm::mat4(1);
+	ubo.model = glm::rotate(ubo.model, time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	ubo.view = glm::lookAt(
 		cameraPos,
 		cameraPos + cameraFront,
 		cameraUp
 	);
-	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
+	ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
 	ubo.proj[1][1] *= -1;
 
 	void* data;
