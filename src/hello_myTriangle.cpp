@@ -63,6 +63,8 @@ void GreatView::initVulkan()
 	CreateDescriptorSets();
 	CreateCommandBuffers();
 	CreateSyncObjects();
+
+	fovInRadiant = glm::radians(FOV);
 }
 
 void GreatView::mainLoop()
@@ -350,7 +352,7 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 		cameraPos + cameraFront,
 		cameraUp
 	);
-	ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
+	ubo.proj = glm::perspective(fovInRadiant, swapChainExtent.width / (float)swapChainExtent.height, NEAR_DISTANCE, FAR_DISTANCE);
 	ubo.proj[1][1] *= -1;
 
 	void* data;
@@ -366,28 +368,27 @@ VkSampleCountFlagBits GreatView::GetMaxUsableSampleCount()
 
 	VkSampleCountFlags counts = std::min(physicalDeviceProperties.limits.framebufferColorSampleCounts, physicalDeviceProperties.limits.framebufferDepthSampleCounts);
 
-	if(counts & VK_SAMPLE_COUNT_64_BIT)
-	{
+	if (counts & VK_SAMPLE_COUNT_64_BIT) {
 		return VK_SAMPLE_COUNT_64_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_32_BIT)
-	{
-		return VK_SAMPLE_COUNT_32_BIT;
+
+	if (counts & VK_SAMPLE_COUNT_32_BIT){
+		VK_SAMPLE_COUNT_32_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_16_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_16_BIT){
 		return VK_SAMPLE_COUNT_16_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_8_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_8_BIT){
 		return VK_SAMPLE_COUNT_8_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_4_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_4_BIT){
 		return VK_SAMPLE_COUNT_4_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_2_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_2_BIT){
 		return VK_SAMPLE_COUNT_2_BIT;
 	}
 
@@ -1238,6 +1239,8 @@ void GreatView::LoadModel()
 
 			vertex.color = { 1.0f, 1.0f, 1.0f };
 
+			vertex.lightColor = { 1.0f, 1.0f, 1.0f };
+
 			if (uniqueVertices.count(vertex) == 0)
 			{
 				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
@@ -1328,6 +1331,7 @@ void GreatView::DrawFrame()
 
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		RecreateSwapChain();
@@ -1522,7 +1526,7 @@ void GreatView::CreateVertexBuffer()
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
 
-	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize); 
 
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
