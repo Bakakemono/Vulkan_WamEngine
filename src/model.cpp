@@ -1,8 +1,10 @@
 #include <model.h>
+#include <unordered_map>
 
 Model::Model(const std::string path)
 {
-	LoadModel(&path);
+	this->path = path;
+	LoadModel(&(this->path));
 }
 
 bool Model::LoadModel(const std::string* path)
@@ -13,9 +15,9 @@ bool Model::LoadModel(const std::string* path)
 	std::string warn, err;
 
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path->c_str())) {
+		return false;
 		throw std::runtime_error(warn + err);
 	}
-
 	std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
 
 	for (const auto& shape : shapes)
@@ -23,12 +25,18 @@ bool Model::LoadModel(const std::string* path)
 		for (const auto& index : shape.mesh.indices)
 		{
 			Vertex vertex = {};
-
+			
 			vertex.pos =
 			{
 				attrib.vertices[3 * index.vertex_index + 0],
 				attrib.vertices[3 * index.vertex_index + 1],
 				attrib.vertices[3 * index.vertex_index + 2]
+			};
+			vertex.normal =
+			{
+				attrib.normals[3 * index.normal_index + 0],
+				attrib.normals[3 * index.normal_index + 1],
+				attrib.normals[3 * index.normal_index + 2]
 			};
 
 			vertex.texCoord = {
@@ -40,13 +48,20 @@ bool Model::LoadModel(const std::string* path)
 
 			vertex.lightColor = { 1.0f, 1.0f, 1.0f };
 
-			if (uniqueVertices.count(vertex) == 0)
-			{
-				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-				vertices.push_back(vertex);
-			}
+			vertex.lightDir = { 1.0f, 1.0f, 1.0f };
 
-			indices.push_back(uniqueVertices[vertex]);
+			// vertex multiplication is necessary for normal
+
+			//if (uniqueVertices.count(vertex) == 0)
+			//{
+			//	uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+			//	vertices.push_back(vertex);
+			//}
+
+			//indices.push_back(uniqueVertices[vertex]);
+			vertices.push_back(vertex);
+			indices.push_back(indices.size());
 		}
 	}
+	return true;
 }

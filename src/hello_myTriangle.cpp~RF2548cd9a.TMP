@@ -32,6 +32,8 @@ void GreatView::initWindow()
 		printf("Could not create window: %\n", SDL_GetError());
 		throw std::runtime_error("");
 	}
+	SetCursorPos(1535 / 2, 863 / 2);
+
 }
 
 void GreatView::initVulkan()
@@ -62,7 +64,7 @@ void GreatView::initVulkan()
 	CreateCommandBuffers();
 	CreateSyncObjects();
 
-	camera.SetCamera(FOV, NEAR_DISTANCE, FAR_DISTANCE, CAMERA_SPEED, CAMERA_SENSITIVITY, START_POSITION, START_FRONT, SCREEN_CENTER_X, SCREEN_CENTER_Y);
+	fovInRadiant = glm::radians(FOV);
 }
 
 void GreatView::mainLoop()
@@ -86,6 +88,15 @@ void GreatView::mainLoop()
 			if(e.type == SDL_WINDOWEVENT_RESIZED)
 			{
 				framebufferResizeCallback(window, -1, -1);
+			}
+
+			if(e.type == SDL_KEYDOWN)
+			{
+				isKeyDown = true;
+			}
+			else if(e.type == SDL_KEYUP)
+			{
+				isKeyDown = false;
 			}
 		}
 
@@ -270,24 +281,58 @@ void GreatView::GenerateMipmaps(VkImage image, VkFormat imageFormat, uint32_t te
 
 void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 {
+	int x, y;
+	SDL_GetMouseState(&x, &y);
+
+	POINT p;
+	GetCursorPos(&p);
+	ShowCursor(FALSE);
+		
+	cameraSpeed = 2.5f * dt;
+
 	if(inputManager.GetButton(SDLK_w))
 	{
-		camera.GoFront(dt);
+		cameraPos += cameraSpeed * cameraFront;
 	}
 	if (inputManager.GetButton(SDLK_s))
 	{
-		camera.GoBack(dt);
+		cameraPos -= cameraSpeed * cameraFront;
 	}
 	if (inputManager.GetButton(SDLK_a))
 	{
-		camera.GoLeft(dt);
+		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	}
 	if (inputManager.GetButton(SDLK_d))
 	{
-		camera.GoRight(dt);
+		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 	}
 
-	camera.SetFront();
+	float xOffset =  p.x - SCREEN_CENTER_X;
+	float yOffset = -p.y + SCREEN_CENTER_Y;
+
+	float sensivity = 0.5f;
+	xOffset *= sensivity;
+	yOffset *= sensivity;
+
+	SetCursorPos(SCREEN_CENTER_X, SCREEN_CENTER_Y);
+
+	yaw += xOffset;
+	pitch += yOffset;
+
+	if(pitch > 89.0f)
+	{
+		pitch = 89.0f;
+	}
+	if(pitch < -89.0f)
+	{
+		pitch = -89.0f;
+	}
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+	front.y = sin(glm::radians(pitch));
+	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+	cameraFront = glm::normalize(front);
 	
 	//FUN HERE
 
@@ -299,16 +344,15 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 	//ubo.model = glm::rotate(glm:: (1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 1.0f));
 	//ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(2.0, 2.0, 2.0));
 	ubo.model = glm::mat4(1);
-	ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 0.0f));
-	ubo.model = glm::rotate(ubo.model, time * glm::radians(35.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	ubo.view = glm::lookAt(
-		camera.GetPosition(),
-		camera.GetPosition() + camera.GetFront(),
-		camera.UP
+		cameraPos,
+		cameraPos + cameraFront,
+		cameraUp
 	);
-	ubo.proj = glm::perspective(camera.GetFOV(), swapChainExtent.width / (float)swapChainExtent.height, camera.GetNear(), camera.GetFar());
+	ubo.proj = glm::perspective(fovInRadiant, swapChainExtent.width / (float)swapChainExtent.height, NEAR_DISTANCE, FAR_DISTANCE);
 	ubo.proj[1][1] *= -1;
 
 	void* data;
@@ -784,8 +828,8 @@ void GreatView::CreateImageViews()
 
 void GreatView::CreateGraphicsPipeline()
 {
-	auto vertShaderCode = ReadFile("shaders/triangle.vert.spv");
-	auto fragShaderCode = ReadFile("shaders/triangle.frag.spv");
+	auto vertShaderCode = readFile("shaders/triangle.vert.spv");
+	auto fragShaderCode = readFile("shaders/triangle.frag.spv");
 
 	VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
 	VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
@@ -1207,12 +1251,7 @@ void GreatView::LoadModel()
 	//	}
 	//}
 
-	//models.push_back(Model(MODEL_PATH));
-
-	for (std::string path : modelsPaths)
-	{
-		models.push_back(Model(path));
-	}
+	models.push_back(Model(MODEL_PATH));
 }
 
 void GreatView::CreateCommandBuffers()
@@ -1289,8 +1328,6 @@ void GreatView::DrawFrame()
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
-
-	//renderNormally
 
 	UpdateUniformBuffer(imageIndex);
 
@@ -1399,7 +1436,7 @@ void GreatView::CreateSyncObjects()
 	}
 }
 
-std::vector<char> GreatView::ReadFile(const std::string & filename)
+std::vector<char> GreatView::readFile(const std::string & filename)
 {	
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 

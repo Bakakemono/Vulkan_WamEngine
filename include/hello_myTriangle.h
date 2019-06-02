@@ -8,8 +8,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include <model.h>
-
 #include <Windows.h>
 
 #include <iostream>
@@ -24,20 +22,25 @@
 #include <array>
 #include <map>
 
-#include <input..h>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/hash.hpp>
+#include <input..h>
+#include <model.h>
+#include "camera.h"
+
+//#define GLM_FORCE_RADIANS
+//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+//#define GLM_ENABLE_EXPERIMENTAL
+//#include <glm/glm.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
+//#include <glm/gtx/hash.hpp>
+
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
+//#define TINYOBJLOADER_IMPLEMENTATION
+//#include <tiny_obj_loader.h>
 
 #include <assimp/cimport.h>        // Plain-C interface
 #include <assimp/scene.h>          // Output data structure
@@ -50,15 +53,6 @@ namespace Assimp {
 		struct vertex;
 	}
 }
-
-
-
-
-template<> struct std::hash<Vertex> {
-	size_t operator()(Vertex const& vertex) const {
-		return ((std::hash<glm::vec3>()(vertex.pos) ^ (std::hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^ (std::hash<glm::vec2>()(vertex.texCoord) << 1);
-	}
-};
 
 struct UniformBufferObject
 {
@@ -81,21 +75,6 @@ struct SwapChainSupportDetails
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
 };
-
-const int HEIGHT = 600;
-const int WIDTH = 800;
-
-const int SCREEN_CENTER_X = 767;
-const int SCREEN_CENTER_Y = 431;
-
-const float NEAR_DISTANCE = 0.1f;
-const float FAR_DISTANCE = 10000.0f;
-
-const float FOV = 60.0f;
-
-
-const std::string MODEL_PATH = "models/Mountain.obj";
-const std::string TEXTURE_PATH = "textures/cube.png";
 
 const std::vector<const char*> validationLayers =
 {
@@ -173,7 +152,7 @@ private:
 		VkDeviceMemory& imageMemory
 	);
 
-	static std::vector<char> readFile(const std::string& filename);
+	static std::vector<char> ReadFile(const std::string& filename);
 
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
 
@@ -291,11 +270,6 @@ private:
 
 	bool frameBufferResized = false;
 
-	// 3D model Part
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
-	// End
-
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
 
@@ -325,30 +299,42 @@ private:
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
 
-
-	std::vector<Model> models;
-
-
 	// CAMERA SECTION
-	bool isKeyDown = false;
-	float cameraSpeed = 0.05f;
-
-	glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
-	glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
-	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
+	Camera camera;
 
 	float dt;
 	float lastFrame = 0;
 
-	float yaw = 0;
-	float pitch = 0;
-
 	InputManager inputManager;
 
+	const int HEIGHT = 600;
+	const int WIDTH = 800;
+
+	const int SCREEN_CENTER_X = 767;
+	const int SCREEN_CENTER_Y = 431;
+
+	const float NEAR_DISTANCE = 0.1f;
+	const float FAR_DISTANCE = 10000.0f;
+
+	const float FOV = 60.0f;
+
+	const float CAMERA_SPEED = 5.0f;
+	const float CAMERA_SENSITIVITY = 0.5f;
+
+	const glm::vec3 START_POSITION = glm::vec3(0, 0, -10);
+	const glm::vec3 START_FRONT = glm::vec3(0, 0, 1);
+
+
+
+	// MODELS SECTION
+	std::vector<Model> models;
+
+	const std::string MODEL_PATH = "models/Mountain.obj";
+	const std::string TEXTURE_PATH = "textures/cube.png";
+
+	std::vector<std::string> modelsPaths { "models/Tentacle_lp.obj" };
+	std::vector<std::string> texturesPaths{ "textures/Tentacle_lp_defaultMat_BaseColor.png" };
+
 	bool quit = false;
-
-
-	float fovInRadiant;
 };
 #endif

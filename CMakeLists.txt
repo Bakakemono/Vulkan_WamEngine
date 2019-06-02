@@ -39,6 +39,8 @@ include_directories(include ${CMAKE_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE PROJECT_SRC src/*.cpp include/*.h)
 
+include_directories(externals/imgui)
+
 #SDL
 set(SDL_VERSION 2.0.9)
 set(SDL_DIR ${EXTERNAL_DIR}/SDL2-${SDL_VERSION}/)
