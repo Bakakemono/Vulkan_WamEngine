@@ -1,9 +1,9 @@
-#include "..\include\hello_myTriangle.h"
-#include <hello_myTriangle.h>
+#include "..\include\WamEngine.h"
+#include <WamEngine.h>
 #include <valarray>
 #include <string>
 
-void GreatView::run()
+void WamEngine::run()
 {
 	initWindow();
 	initVulkan();
@@ -11,7 +11,7 @@ void GreatView::run()
 	cleanup();
 }
 
-void GreatView::initWindow()
+void WamEngine::initWindow()
 {
 	SDL_Init(SDL_INIT_VIDEO);  // Initialize SDL2
 
@@ -32,11 +32,9 @@ void GreatView::initWindow()
 		printf("Could not create window: %\n", SDL_GetError());
 		throw std::runtime_error("");
 	}
-	SetCursorPos(1535 / 2, 863 / 2);
-
 }
 
-void GreatView::initVulkan()
+void WamEngine::initVulkan()
 {
 	CreateInstance();
 	SetupDebugMessenger();
@@ -63,9 +61,11 @@ void GreatView::initVulkan()
 	CreateDescriptorSets();
 	CreateCommandBuffers();
 	CreateSyncObjects();
+
+	camera.SetCamera(FOV, NEAR_DISTANCE, FAR_DISTANCE, CAMERA_SPEED, CAMERA_SENSITIVITY, START_POSITION, START_FRONT, SCREEN_CENTER_X, SCREEN_CENTER_Y);
 }
 
-void GreatView::mainLoop()
+void WamEngine::mainLoop()
 {
 	while (!quit)
 	{
@@ -87,15 +87,6 @@ void GreatView::mainLoop()
 			{
 				framebufferResizeCallback(window, -1, -1);
 			}
-
-			if(e.type == SDL_KEYDOWN)
-			{
-				isKeyDown = true;
-			}
-			else if(e.type == SDL_KEYUP)
-			{
-				isKeyDown = false;
-			}
 		}
 
 		static auto startTime = std::chrono::high_resolution_clock::now();
@@ -110,7 +101,7 @@ void GreatView::mainLoop()
 	vkDeviceWaitIdle(device);
 }
 
-void GreatView::cleanup()
+void WamEngine::cleanup()
 {
 	CleanUpSwapChain();
 
@@ -149,7 +140,7 @@ void GreatView::cleanup()
 	SDL_Quit();
 }
 
-void GreatView::CleanUpSwapChain()
+void WamEngine::CleanUpSwapChain()
 {
 	vkDestroyImageView(device, colorImageView, nullptr);
 	vkDestroyImage(device, colorImage, nullptr);
@@ -183,7 +174,7 @@ void GreatView::CleanUpSwapChain()
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 }
 
-void GreatView::GenerateMipmaps(VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
+void WamEngine::GenerateMipmaps(VkImage image, VkFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)
 {
 	// Check if image format supports linear blitting
 	VkFormatProperties formatProperties;
@@ -277,62 +268,26 @@ void GreatView::GenerateMipmaps(VkImage image, VkFormat imageFormat, uint32_t te
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void GreatView::UpdateUniformBuffer(uint32_t currentImage)
+void WamEngine::UpdateUniformBuffer(uint32_t currentImage)
 {
-	int x, y;
-	SDL_GetMouseState(&x, &y);
-
-	POINT p;
-	GetCursorPos(&p);
-	ShowCursor(FALSE);
-		
-	cameraSpeed = 2.5f * dt;
-
 	if(inputManager.GetButton(SDLK_w))
 	{
-		cameraPos += cameraSpeed * cameraFront;
+		camera.GoFront(dt);
 	}
 	if (inputManager.GetButton(SDLK_s))
 	{
-		cameraPos -= cameraSpeed * cameraFront;
+		camera.GoBack(dt);
 	}
 	if (inputManager.GetButton(SDLK_a))
 	{
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.GoLeft(dt);
 	}
 	if (inputManager.GetButton(SDLK_d))
 	{
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		camera.GoRight(dt);
 	}
 
-	float xOffset =  p.x - SCREEN_CENTER_X;
-	float yOffset = -p.y + SCREEN_CENTER_Y;
-
-	std::cout << inputManager.GetMouseWheelDelta() << "\n";
-
-	float sensivity = 0.5f;
-	xOffset *= sensivity;
-	yOffset *= sensivity;
-
-	SetCursorPos(SCREEN_CENTER_X, SCREEN_CENTER_Y);
-
-	yaw += xOffset;
-	pitch += yOffset;
-
-	if(pitch > 89.0f)
-	{
-		pitch = 89.0f;
-	}
-	if(pitch < -89.0f)
-	{
-		pitch = -89.0f;
-	}
-
-	glm::vec3 front;
-	front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
-	front.y = sin(glm::radians(pitch));
-	front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-	cameraFront = glm::normalize(front);
+	camera.UpdateFront();
 	
 	//FUN HERE
 
@@ -344,15 +299,16 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 	//ubo.model = glm::rotate(glm:: (1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 1.0f));
 	//ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(2.0, 2.0, 2.0));
 	ubo.model = glm::mat4(1);
-	ubo.model = glm::rotate(ubo.model, time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, time * glm::radians(35.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	ubo.view = glm::lookAt(
-		cameraPos,
-		cameraPos + cameraFront,
-		cameraUp
+		camera.GetPosition(),
+		camera.GetPosition() + camera.GetFront(),
+		camera.UP
 	);
-	ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10000.0f);
+	ubo.proj = glm::perspective(camera.GetFOV(), swapChainExtent.width / (float)swapChainExtent.height, camera.GetNear(), camera.GetFar());
 	ubo.proj[1][1] *= -1;
 
 	void* data;
@@ -361,42 +317,41 @@ void GreatView::UpdateUniformBuffer(uint32_t currentImage)
 	vkUnmapMemory(device, uniformBufferMemory[currentImage]);
 }
 
-VkSampleCountFlagBits GreatView::GetMaxUsableSampleCount()
+VkSampleCountFlagBits WamEngine::GetMaxUsableSampleCount()
 {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
 	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 
 	VkSampleCountFlags counts = std::min(physicalDeviceProperties.limits.framebufferColorSampleCounts, physicalDeviceProperties.limits.framebufferDepthSampleCounts);
 
-	if(counts & VK_SAMPLE_COUNT_64_BIT)
-	{
+	if (counts & VK_SAMPLE_COUNT_64_BIT) {
 		return VK_SAMPLE_COUNT_64_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_32_BIT)
-	{
-		return VK_SAMPLE_COUNT_32_BIT;
+
+	if (counts & VK_SAMPLE_COUNT_32_BIT){
+		VK_SAMPLE_COUNT_32_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_16_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_16_BIT){
 		return VK_SAMPLE_COUNT_16_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_8_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_8_BIT){
 		return VK_SAMPLE_COUNT_8_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_4_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_4_BIT){
 		return VK_SAMPLE_COUNT_4_BIT;
 	}
-	if (counts & VK_SAMPLE_COUNT_2_BIT)
-	{
+
+	if (counts & VK_SAMPLE_COUNT_2_BIT){
 		return VK_SAMPLE_COUNT_2_BIT;
 	}
 
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-void GreatView::CreateColorResources()
+void WamEngine::CreateColorResources()
 {
 	VkFormat colorFormat = swapChainImageFormat;
 
@@ -406,7 +361,7 @@ void GreatView::CreateColorResources()
 	TransitionImageLayout(colorImage, colorFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
 }
 
-VkFormat GreatView::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+VkFormat WamEngine::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
 {
 	for (VkFormat format : candidates)
 	{
@@ -426,7 +381,7 @@ VkFormat GreatView::FindSupportedFormat(const std::vector<VkFormat>& candidates,
 	throw std::runtime_error("failed to find supported format!");
 }
 
-VkFormat GreatView::FindDepthFormat()
+VkFormat WamEngine::FindDepthFormat()
 {
 	return FindSupportedFormat(
 		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
@@ -435,19 +390,19 @@ VkFormat GreatView::FindDepthFormat()
 	);
 }
 
-bool GreatView::HasStencilComponent(VkFormat format)
+bool WamEngine::HasStencilComponent(VkFormat format)
 {
 	return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 
-void GreatView::framebufferResizeCallback(SDL_Window * window, int width, int height)
+void WamEngine::framebufferResizeCallback(SDL_Window * window, int width, int height)
 {
-	auto app = reinterpret_cast<GreatView*>(SDL_GetWindowData(window, "Vulkan App"));
+	auto app = reinterpret_cast<WamEngine*>(SDL_GetWindowData(window, "Vulkan App"));
 	app->frameBufferResized = true;
 }
 
-void GreatView::CreateInstance()
+void WamEngine::CreateInstance()
 {
 	if (enableValidationLayers && !CheckValidationLayerSupport()) {
 		throw std::runtime_error("validation layers requested, but not available!");
@@ -482,7 +437,7 @@ void GreatView::CreateInstance()
 	}
 }
 
-std::vector<const char*> GreatView::GetRequiredExtensions()
+std::vector<const char*> WamEngine::GetRequiredExtensions()
 {
 	uint32_t extensionCount = 0;
 
@@ -504,7 +459,7 @@ std::vector<const char*> GreatView::GetRequiredExtensions()
 	return extensions;
 }
 
-bool GreatView::CheckValidationLayerSupport()
+bool WamEngine::CheckValidationLayerSupport()
 {
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -534,7 +489,7 @@ bool GreatView::CheckValidationLayerSupport()
 	return true;
 }
 
-void GreatView::SetupDebugMessenger()
+void WamEngine::SetupDebugMessenger()
 {
 	if (!enableValidationLayers) return;
 
@@ -557,7 +512,7 @@ void GreatView::SetupDebugMessenger()
 	}
 }
 
-void GreatView::PickPhysicalDevice()
+void WamEngine::PickPhysicalDevice()
 {
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -586,7 +541,7 @@ void GreatView::PickPhysicalDevice()
 	}
 }
 
-bool GreatView::IsDeviceSuitable(VkPhysicalDevice device)
+bool WamEngine::IsDeviceSuitable(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices = FindQueueFamilies(device);
 
@@ -604,7 +559,7 @@ bool GreatView::IsDeviceSuitable(VkPhysicalDevice device)
 	return indices.IsComplete() && extensionsSupported && swapChainAdequate  && supportedFeatures.samplerAnisotropy;
 }
 
-bool GreatView::checkDeviceExtensionSupport(VkPhysicalDevice device)
+bool WamEngine::checkDeviceExtensionSupport(VkPhysicalDevice device)
 {
 	uint32_t extensionCount;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -621,7 +576,7 @@ bool GreatView::checkDeviceExtensionSupport(VkPhysicalDevice device)
 	return requiredExtensions.empty();
 }
 
-SwapChainSupportDetails GreatView::QuerySwapChainSupport(VkPhysicalDevice device)
+SwapChainSupportDetails WamEngine::QuerySwapChainSupport(VkPhysicalDevice device)
 {
 	SwapChainSupportDetails details;
 
@@ -648,7 +603,7 @@ SwapChainSupportDetails GreatView::QuerySwapChainSupport(VkPhysicalDevice device
 	return details;
 }
 
-VkSurfaceFormatKHR GreatView::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+VkSurfaceFormatKHR WamEngine::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
 {
 	if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED)
 	{
@@ -666,7 +621,7 @@ VkSurfaceFormatKHR GreatView::ChooseSwapSurfaceFormat(const std::vector<VkSurfac
 	return availableFormats[0];
 }
 
-VkPresentModeKHR GreatView::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+VkPresentModeKHR WamEngine::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
 {
 	VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
 
@@ -685,7 +640,7 @@ VkPresentModeKHR GreatView::ChooseSwapPresentMode(const std::vector<VkPresentMod
 	return bestMode;
 }
 
-VkExtent2D GreatView::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+VkExtent2D WamEngine::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
 {
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
 	{
@@ -709,7 +664,7 @@ VkExtent2D GreatView::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilit
 	}
 }
 
-void GreatView::CreateLogicalDevice()
+void WamEngine::CreateLogicalDevice()
 {
 	QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
 
@@ -757,7 +712,7 @@ void GreatView::CreateLogicalDevice()
 	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
-void GreatView::CreateSurface()
+void WamEngine::CreateSurface()
 {
 	if(!SDL_Vulkan_CreateSurface(window, instance, &surface))
 	{
@@ -765,7 +720,7 @@ void GreatView::CreateSurface()
 	}
 }
 
-void GreatView::CreateSwapChain()
+void WamEngine::CreateSwapChain()
 {
 	SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(physicalDevice);
 
@@ -818,7 +773,7 @@ void GreatView::CreateSwapChain()
 	swapChainExtent = extent;
 }
 
-void GreatView::CreateImageViews()
+void WamEngine::CreateImageViews()
 {
 	swapChainImageViews.resize(swapChainImages.size());
 
@@ -827,10 +782,10 @@ void GreatView::CreateImageViews()
 	}
 }
 
-void GreatView::CreateGraphicsPipeline()
+void WamEngine::CreateGraphicsPipeline()
 {
-	auto vertShaderCode = readFile("shaders/triangle.vert.spv");
-	auto fragShaderCode = readFile("shaders/triangle.frag.spv");
+	auto vertShaderCode = ReadFile("shaders/triangle.vert.spv");
+	auto fragShaderCode = ReadFile("shaders/triangle.frag.spv");
 
 	VkShaderModule vertShaderModule = CreateShaderModule(vertShaderCode);
 	VkShaderModule fragShaderModule = CreateShaderModule(fragShaderCode);
@@ -960,7 +915,7 @@ void GreatView::CreateGraphicsPipeline()
 	vkDestroyShaderModule(device, vertShaderModule, nullptr);
 }
 
-void GreatView::CreateRenderPass()
+void WamEngine::CreateRenderPass()
 {
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format = swapChainImageFormat;
@@ -1035,7 +990,7 @@ void GreatView::CreateRenderPass()
 	}
 }
 
-void GreatView::CreateDescriptorSetLayout()
+void WamEngine::CreateDescriptorSetLayout()
 {
 	VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 	uboLayoutBinding.binding = 0;
@@ -1063,7 +1018,7 @@ void GreatView::CreateDescriptorSetLayout()
 	}
 }
 
-void GreatView::CreateFrameBuffers()
+void WamEngine::CreateFrameBuffers()
 {
 	swapChainFrameBuffers.resize(swapChainImageViews.size());
 
@@ -1089,7 +1044,7 @@ void GreatView::CreateFrameBuffers()
 	}
 }
 
-void GreatView::CreateCommandPool()
+void WamEngine::CreateCommandPool()
 {
 	QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(physicalDevice);
 
@@ -1103,7 +1058,7 @@ void GreatView::CreateCommandPool()
 	}
 }
 
-void GreatView::CreateDepthResources()
+void WamEngine::CreateDepthResources()
 {
 	VkFormat depthFormat = FindDepthFormat();
 
@@ -1124,7 +1079,7 @@ void GreatView::CreateDepthResources()
 	TransitionImageLayout(depthImage, depthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 }
 
-void GreatView:: CreateTextureImage()
+void WamEngine::CreateTextureImage()
 {
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
@@ -1176,12 +1131,12 @@ void GreatView:: CreateTextureImage()
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void GreatView::CreateTextureImageView()
+void WamEngine::CreateTextureImageView()
 {
 	textureImageView = CreateImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, miplevels);
 }
 
-void GreatView::CreateTextureSampler()
+void WamEngine::CreateTextureSampler()
 {
 	VkSamplerCreateInfo samplerInfo = {};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1207,65 +1162,60 @@ void GreatView::CreateTextureSampler()
 	}
 }
 
-void GreatView::LoadModel()
+void WamEngine::LoadModel()
 {
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string warn, err;
+	//tinyobj::attrib_t attrib;
+	//std::vector<tinyobj::shape_t> shapes;
+	//std::vector<tinyobj::material_t> materials;
+	//std::string warn, err;
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
-		throw std::runtime_error(warn + err);
-	}
-
-	std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-
-	for (const auto& shape : shapes)
-	{
-		for (const auto& index : shape.mesh.indices)
-		{
-			Vertex vertex = {};
-
-			vertex.pos =
-			{
-				attrib.vertices[3 * index.vertex_index + 0],
-				attrib.vertices[3 * index.vertex_index + 1],
-				attrib.vertices[3 * index.vertex_index + 2]
-			};
-
-			vertex.texCoord = {
-				attrib.texcoords[2 * index.texcoord_index + 0],
-				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-			};
-
-			vertex.color = { 1.0f, 1.0f, 1.0f };
-
-			if (uniqueVertices.count(vertex) == 0)
-			{
-				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-				vertices.push_back(vertex);
-			}
-
-			indices.push_back(uniqueVertices[vertex]);
-		}
-	}
-
-	//// Import the model with example of post Processing
-	//const aiScene* scene = aiImportFile(
-	//	MODEL_PATH.c_str(),
-	//	aiProcess_CalcTangentSpace |
-	//	aiProcess_Triangulate |
-	//	aiProcess_JoinIdenticalVertices |
-	//	aiProcess_SortByPType
-	//);
-
-	//if (!scene)
-	//{
-	//	throw std::runtime_error(aiGetErrorString());
+	//if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+	//	throw std::runtime_error(warn + err);
 	//}
+
+	//std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+
+	//for (const auto& shape : shapes)
+	//{
+	//	for (const auto& index : shape.mesh.indices)
+	//	{
+	//		Vertex vertex = {};
+
+	//		vertex.pos =
+	//		{
+	//			attrib.vertices[3 * index.vertex_index + 0],
+	//			attrib.vertices[3 * index.vertex_index + 1],
+	//			attrib.vertices[3 * index.vertex_index + 2]
+	//		};
+
+	//		vertex.texCoord = {
+	//			attrib.texcoords[2 * index.texcoord_index + 0],
+	//			1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+	//		};
+
+	//		vertex.color = { 1.0f, 1.0f, 1.0f };
+
+	//		vertex.lightColor = { 1.0f, 1.0f, 1.0f };
+
+	//		if (uniqueVertices.count(vertex) == 0)
+	//		{
+	//			uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+	//			vertices.push_back(vertex);
+	//		}
+
+	//		indices.push_back(uniqueVertices[vertex]);
+	//	}
+	//}
+
+	//models.push_back(Model(MODEL_PATH));
+
+	for (std::string path : modelsPaths)
+	{
+		models.push_back(Model(path));
+	}
 }
 
-void GreatView::CreateCommandBuffers()
+void WamEngine::CreateCommandBuffers()
 {
 	commandBuffers.resize(swapChainFrameBuffers.size());
 
@@ -1314,7 +1264,7 @@ void GreatView::CreateCommandBuffers()
 
 		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 
-		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(models[0].indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1324,12 +1274,13 @@ void GreatView::CreateCommandBuffers()
 	}
 }
 
-void GreatView::DrawFrame()
+void WamEngine::DrawFrame()
 {
 	vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
 
 	uint32_t imageIndex;
 	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
 
 	if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 		RecreateSwapChain();
@@ -1338,6 +1289,8 @@ void GreatView::DrawFrame()
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
+
+	//renderNormally
 
 	UpdateUniformBuffer(imageIndex);
 
@@ -1388,7 +1341,7 @@ void GreatView::DrawFrame()
 	currentFrame = (currentFrame + 1) % MAX_FRAME_IN_FLIGHT;
 }
 
-void GreatView::CreateImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory& imageMemory)
+void WamEngine::CreateImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage & image, VkDeviceMemory& imageMemory)
 {
 	VkImageCreateInfo imageInfo = {};
 	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1424,7 +1377,7 @@ void GreatView::CreateImage(uint32_t width, uint32_t height, uint32_t mipLevels,
 	vkBindImageMemory(device, image, imageMemory, 0);
 }
 
-void GreatView::CreateSyncObjects()
+void WamEngine::CreateSyncObjects()
 {
 	imageAvailableSemaphores.resize(MAX_FRAME_IN_FLIGHT);
 	renderFinishedSemaphores.resize(MAX_FRAME_IN_FLIGHT);
@@ -1446,7 +1399,7 @@ void GreatView::CreateSyncObjects()
 	}
 }
 
-std::vector<char> GreatView::readFile(const std::string & filename)
+std::vector<char> WamEngine::ReadFile(const std::string & filename)
 {	
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
@@ -1466,7 +1419,7 @@ std::vector<char> GreatView::readFile(const std::string & filename)
 	return buffer;
 }
 
-VkShaderModule GreatView::CreateShaderModule(const std::vector<char>& code)
+VkShaderModule WamEngine::CreateShaderModule(const std::vector<char>& code)
 {
 	VkShaderModuleCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1482,7 +1435,7 @@ VkShaderModule GreatView::CreateShaderModule(const std::vector<char>& code)
 	return shaderModule;
 }
 
-void GreatView::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
+void WamEngine::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1509,9 +1462,9 @@ void GreatView::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemo
 	vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-void GreatView::CreateVertexBuffer()
+void WamEngine::CreateVertexBuffer()
 {
-	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	VkDeviceSize bufferSize = sizeof(models[0].vertices[0]) * models[0].vertices.size();
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -1519,20 +1472,20 @@ void GreatView::CreateVertexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), (size_t)bufferSize);
+	memcpy(data, models[0].vertices.data(), (size_t)bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
 
-	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+	CopyBuffer(stagingBuffer, vertexBuffer, bufferSize); 
 
 	vkDestroyBuffer(device, stagingBuffer, nullptr);
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void GreatView::CreateIndexBuffer()
+void WamEngine::CreateIndexBuffer()
 {
-	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+	VkDeviceSize bufferSize = sizeof(models[0].indices[0]) * models[0].indices.size();
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -1540,7 +1493,7 @@ void GreatView::CreateIndexBuffer()
 
 	void* data;
 	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), (size_t)bufferSize);
+	memcpy(data, models[0].indices.data(), (size_t)bufferSize);
 	vkUnmapMemory(device, stagingBufferMemory);
 
 	CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -1551,7 +1504,7 @@ void GreatView::CreateIndexBuffer()
 	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void GreatView::CreateUniformBuffers()
+void WamEngine::CreateUniformBuffers()
 {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
@@ -1563,7 +1516,7 @@ void GreatView::CreateUniformBuffers()
 	}
 }
 
-void GreatView::CreateDescriptorPool()
+void WamEngine::CreateDescriptorPool()
 {
 	std::array<VkDescriptorPoolSize, 2> poolSizes = {};
 	poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1583,7 +1536,7 @@ void GreatView::CreateDescriptorPool()
 	}
 }
 
-void GreatView::CreateDescriptorSets()
+void WamEngine::CreateDescriptorSets()
 {
 	std::vector<VkDescriptorSetLayout> layouts(swapChainImages.size(), descriptorSetLayout);
 	VkDescriptorSetAllocateInfo allocInfo = {};
@@ -1630,7 +1583,7 @@ void GreatView::CreateDescriptorSets()
 	}
 }
 
-void GreatView::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+void WamEngine::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -1641,7 +1594,7 @@ void GreatView::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize 
 	EndSingleTimeCommands(commandBuffer);
 }
 
-uint32_t GreatView::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t WamEngine::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties memProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
@@ -1657,7 +1610,7 @@ uint32_t GreatView::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags pr
 	throw std::runtime_error("failed to find suitable memory type!");
 }
 
-VkCommandBuffer GreatView::BeginSingleTimeCommands()
+VkCommandBuffer WamEngine::BeginSingleTimeCommands()
 {
 	VkCommandBufferAllocateInfo allocInfo = {};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1677,7 +1630,7 @@ VkCommandBuffer GreatView::BeginSingleTimeCommands()
 	return commandBuffer;
 }
 
-void GreatView::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
+void WamEngine::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
 {
 	vkEndCommandBuffer(commandBuffer);
 
@@ -1692,7 +1645,7 @@ void GreatView::EndSingleTimeCommands(VkCommandBuffer commandBuffer)
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
-void GreatView::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
+void WamEngine::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
 {
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -1775,7 +1728,7 @@ void GreatView::TransitionImageLayout(VkImage image, VkFormat format, VkImageLay
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void GreatView::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+void WamEngine::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 {
 	VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
@@ -1799,7 +1752,7 @@ void GreatView::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width
 	EndSingleTimeCommands(commandBuffer);
 }
 
-VkImageView GreatView::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
+VkImageView WamEngine::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
 {
 	VkImageViewCreateInfo viewInfo = {};
 	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1821,7 +1774,7 @@ VkImageView GreatView::CreateImageView(VkImage image, VkFormat format, VkImageAs
 	return imageView;
 }
 
-void GreatView::RecreateSwapChain()
+void WamEngine::RecreateSwapChain()
 {
 	int width = 0;
 	int height = 0;
@@ -1848,7 +1801,7 @@ void GreatView::RecreateSwapChain()
 	CreateCommandBuffers();
 }
 
-QueueFamilyIndices GreatView::FindQueueFamilies(VkPhysicalDevice device)
+QueueFamilyIndices WamEngine::FindQueueFamilies(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices;
 
@@ -1880,7 +1833,7 @@ QueueFamilyIndices GreatView::FindQueueFamilies(VkPhysicalDevice device)
 	return indices;
 }
 
-VkResult GreatView::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugUtilsMessengerEXT * pDebugMessenger)
+VkResult WamEngine::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT * pCreateInfo, const VkAllocationCallbacks * pAllocator, VkDebugUtilsMessengerEXT * pDebugMessenger)
 {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
@@ -1894,7 +1847,7 @@ VkResult GreatView::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDe
 	}
 }
 
-void GreatView::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks * pAllocator)
+void WamEngine::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks * pAllocator)
 {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 	if(func != nullptr)
@@ -1903,7 +1856,7 @@ void GreatView::DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsM
 	}
 }
 
-VkBool32 GreatView::DebugCallBack(VkDebugUtilsMessageSeverityFlagBitsEXT messageSecurity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT * pCallBackData, void * pUserData)
+VkBool32 WamEngine::DebugCallBack(VkDebugUtilsMessageSeverityFlagBitsEXT messageSecurity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT * pCallBackData, void * pUserData)
 {
 	std::cerr << "validation layer: " << pCallBackData->pMessage << std::endl;
 

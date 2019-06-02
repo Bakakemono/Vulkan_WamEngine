@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdexcept>
-#include <hello_myTriangle.h>
+#include <WamEngine.h>
 
 
 
@@ -10,7 +10,7 @@
 
 
 int main(int argc, char **argv) {
-  GreatView app;
+  WamEngine app;
 
   try {
 	  app.run();

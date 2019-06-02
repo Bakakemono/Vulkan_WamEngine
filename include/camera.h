@@ -19,14 +19,12 @@ public:
 
 	void SetCamera(float fov, float zNear, float zFar, float speed, float sensitivity, glm::vec3 beginPosition, glm::vec3 beginFront, int screenCenterX, int screenCenterY);
 
-
-
 	void GoFront(float& deltaTime);
 	void GoBack(float& deltaTime);
 	void GoLeft(float& deltaTime);
 	void GoRight(float& deltaTime);
 
-	void SetFront();
+	void UpdateFront();
 
 	float GetFOV();
 

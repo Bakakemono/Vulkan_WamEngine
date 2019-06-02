@@ -1,5 +1,5 @@
-#ifndef GREAT_VIEW_H
-#define GREAT_VIEW_H
+#ifndef WAM_ENGINE_H
+#define WAM_ENGINE_H
 
 #define VULKAN_ENABLE_LUNARG_VALIDATION
 
@@ -25,7 +25,7 @@
 
 #include <input..h>
 #include <model.h>
-#include "camera.h"
+#include <camera.h>
 
 //#define GLM_FORCE_RADIANS
 //#define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -93,7 +93,7 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-class GreatView
+class WamEngine
 {
 public:
 	void run();

@@ -1,5 +1,4 @@
 #include "camera.h"
-#include "hello_myTriangle.h"
 
 Camera::Camera() {}
 
@@ -52,7 +51,7 @@ void Camera::GoRight(float& deltaTime)
 	cameraPos += glm::normalize(glm::cross(frontPos, UP)) * speed * deltaTime;
 }
 
-void Camera::SetFront()
+void Camera::UpdateFront()
 {
 	GetCursorPos(&mousePosition);
 
