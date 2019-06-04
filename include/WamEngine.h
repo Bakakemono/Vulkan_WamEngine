@@ -20,39 +20,19 @@
 #include <fstream>
 #include <vk_utils.h>
 #include <array>
+#include <valarray>
 #include <map>
+#include <string>
 
 
 #include <input..h>
 #include <model.h>
 #include <camera.h>
 
-//#define GLM_FORCE_RADIANS
-//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-//#define GLM_ENABLE_EXPERIMENTAL
-//#include <glm/glm.hpp>
-//#include <glm/gtc/matrix_transform.hpp>
-//#include <glm/gtx/hash.hpp>
-
-
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-//#define TINYOBJLOADER_IMPLEMENTATION
-//#include <tiny_obj_loader.h>
-
-#include <assimp/cimport.h>        // Plain-C interface
-#include <assimp/scene.h>          // Output data structure
-#include <assimp/postprocess.h>    // Post processing flags
-
 #include <chrono>
-
-namespace Assimp {
-	namespace StepFile {
-		struct vertex;
-	}
-}
 
 struct UniformBufferObject
 {
@@ -84,6 +64,14 @@ const std::vector<const char*> validationLayers =
 const std::vector<const char*> deviceExtensions =
 {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
+struct Pipeline
+{
+	VkPipeline lightPillar;
+	VkPipeline ground;
+	VkPipeline strangeCube;
+	VkPipeline skyBox;
 };
 
 
@@ -119,12 +107,10 @@ private:
 	void CreateFrameBuffers();
 	void CreateCommandPool();
 	void CreateDepthResources();
-	void CreateTextureImage();
-	void CreateTextureImageView(); // HERE
-	void CreateTextureSampler();
 	void LoadModel();
-	void CreateVertexBuffer();
-	void CreateIndexBuffer();
+	void CreateTextureImage();
+	void CreateTextureImageView();
+	void CreateTextureSampler();
 	void CreateUniformBuffers();
 	void CreateDescriptorPool();
 	void CreateDescriptorSets();
@@ -155,25 +141,6 @@ private:
 	static std::vector<char> ReadFile(const std::string& filename);
 
 	VkShaderModule CreateShaderModule(const std::vector<char>& code);
-
-	void CreateBuffer(
-		VkDeviceSize size,
-		VkBufferUsageFlags usage,
-		VkMemoryPropertyFlags properties, 
-		VkBuffer& buffer,
-		VkDeviceMemory& bufferMemory
-	);
-
-	void CopyBuffer(
-		VkBuffer srcBuffer,
-		VkBuffer dstBuffer,
-		VkDeviceSize size
-	);
-
-	uint32_t FindMemoryType(
-		uint32_t typeFilter,
-		VkMemoryPropertyFlags properties
-	);
 
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
@@ -224,6 +191,20 @@ private:
 		void* pUserData
 	);
 
+
+	// pipeline Section
+	inline VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateInitializer(VkPrimitiveTopology topology, VkBool32 primitiveRestartEnable);
+	inline VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateInitializer(VkPolygonMode polygonMode, VkCullModeFlags cullMode, VkFrontFace frontFace);
+	inline VkPipelineColorBlendAttachmentState PipelineColorBlendAttachmentInitializer(VkColorComponentFlags colorWriteMask, VkBool32 blendEnable);
+	inline VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateInitializer(uint32_t attachmentCount, const VkPipelineColorBlendAttachmentState* pAttachement);
+	inline VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateInitializer(VkBool32 depthTestEnable, VkBool32 depthWritenable, VkCompareOp depthCompareOp);
+	inline VkPipelineViewportStateCreateInfo PipelineViewportStateInitializer(uint32_t viewportCount, uint32_t scissorCount);
+	inline VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateInitializer(VkSampleCountFlagBits rasterizationSamples);
+	inline VkPipelineDynamicStateCreateInfo PipelineDynamicStateInitializer(const std::vector<VkDynamicState>& pDynamicStateEnable);
+	inline VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateInitializer();
+
+	VkPipelineShaderStageCreateInfo LoadShader(std::string shaderPath, VkShaderStageFlagBits shaderTypeFlag);
+
 	// Variables :
 	SDL_Window* window;
 	VkSurfaceKHR surface;
@@ -248,10 +229,12 @@ private:
 
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipelineLayout;
+
+	std::vector<VkShaderModule> shaderModules;
 	
 	VkRenderPass renderPass;
 
-	VkPipeline graphicsPipeline;
+	Pipeline graphicsPipelines;
 
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
@@ -270,21 +253,11 @@ private:
 
 	bool frameBufferResized = false;
 
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
-
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
-
 	std::vector<VkBuffer> uniformBuffers;
 	std::vector<VkDeviceMemory> uniformBufferMemory;
 
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
-
-	uint32_t miplevels;
-	VkImage textureImage;
-	VkDeviceMemory textureImageMemory;
 
 	VkImageView textureImageView;
 	VkSampler textureSampler;
@@ -321,19 +294,17 @@ private:
 	const float CAMERA_SPEED = 5.0f;
 	const float CAMERA_SENSITIVITY = 0.5f;
 
-	const glm::vec3 START_POSITION = glm::vec3(0, 0, -10);
+	const glm::vec3 START_POSITION = glm::vec3(0, 0, 0);
 	const glm::vec3 START_FRONT = glm::vec3(0, 0, 1);
 
 
 
 	// MODELS SECTION
 	std::vector<Model> models;
+	std::vector<uint32_t> mipLevels;
 
-	const std::string MODEL_PATH = "models/Mountain.obj";
-	const std::string TEXTURE_PATH = "textures/cube.png";
-
-	std::vector<std::string> modelsPaths { "models/Tentacle_lp.obj" };
-	std::vector<std::string> texturesPaths{ "textures/Tentacle_lp_defaultMat_BaseColor.png" };
+	std::vector<std::string> modelsPaths { "models/LightPillar.obj", "models/Ground.obj", "models/StrangeFloatingThing.obj", "models/SkyBox.obj" };
+	std::vector<std::string> texturesPaths{ "textures/LightPillar.png", "textures/Ground.png", "textures/Ground.png", "textures/SkyBox.png" };
 
 	bool quit = false;
 };

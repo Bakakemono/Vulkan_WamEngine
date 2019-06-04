@@ -4,10 +4,6 @@
 
 #include <iostream>
 
-#include <assimp/cimport.h>        // Plain-C interface
-#include <assimp/scene.h>          // Output data structure
-#include <assimp/postprocess.h>    // Post processing flags
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -16,6 +12,8 @@
 #include <glm/mat4x2.hpp>
 #include <vector>
 #include <array>
+
+#include "buffer.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -33,14 +31,15 @@ struct Vertex {
 	glm::vec3 normal;
 	glm::vec3 lightDir;
 
-	static VkVertexInputBindingDescription getBindingDescription()
+	static std::array<VkVertexInputBindingDescription, 1> getBindingDescriptions()
 	{
-		VkVertexInputBindingDescription bindingDescription = {};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		std::array<VkVertexInputBindingDescription, 1> bindingDescriptions = {};
 
-		return bindingDescription;
+		bindingDescriptions[0].binding = 0;
+		bindingDescriptions[0].stride = sizeof(Vertex);
+		bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescriptions;
 	}
 	static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
 		std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
@@ -93,9 +92,7 @@ template<> struct std::hash<Vertex> {
 class Model
 {
 public:
-	Model(const std::string path);
-	bool LoadModel(const std::string* path);
-	
+	Model(const std::string path, VkPipeline* pipeline, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicQueue, VkCommandPool& commandPool);
  
 	// class members
 	std::string path;
@@ -103,6 +100,37 @@ public:
 
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
+
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
+
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
+
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	uint32_t mipLevels;
+
+	VkImageView textureImageView;
+	VkSampler textureSampler;
+
+	VkPipeline* pipeline;
+
+private:
+	bool LoadModel();
+	void CreateVertexBuffer(
+		VkDevice& device,
+		VkPhysicalDevice& physicalDevice,
+		VkQueue& graphicsQueue, 
+		VkCommandPool& commandPool
+	);
+
+	void CreateIndexBuffer(
+		VkDevice& device,
+		VkPhysicalDevice& physicalDevice,
+		VkQueue& graphicsQueue,
+		VkCommandPool& commandPool
+	);
 };
 
 #endif

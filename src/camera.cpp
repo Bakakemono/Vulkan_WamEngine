@@ -20,6 +20,7 @@ screenCenterY(screenCenterY)
 void Camera::SetCamera(float fov, float zNear, float zFar, float speed, float sensitivity, glm::vec3 beginPosition, glm::vec3 beginFront, int screenCenterX, int screenCenterY)
 {
 	ShowCursor(FALSE);
+	SetCursorPos(screenCenterX, screenCenterY);
 	SetFOV(fov);
 	this->zNear = zNear;
 	this->zFar = zFar;

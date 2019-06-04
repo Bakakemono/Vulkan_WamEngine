@@ -1,20 +1,23 @@
 #include <model.h>
 #include <unordered_map>
 
-Model::Model(const std::string path)
+Model::Model(const std::string path, VkPipeline* pipeline, VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicQueue, VkCommandPool& commandPool)
 {
 	this->path = path;
-	LoadModel(&(this->path));
+	this->pipeline = pipeline;
+	LoadModel();
+	CreateVertexBuffer(device, physicalDevice, graphicQueue, commandPool);
+	CreateIndexBuffer(device, physicalDevice, graphicQueue, commandPool);
 }
 
-bool Model::LoadModel(const std::string* path)
+bool Model::LoadModel()
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 	std::string warn, err;
 
-	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path->c_str())) {
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str())) {
 		return false;
 		throw std::runtime_error(warn + err);
 	}
@@ -48,7 +51,7 @@ bool Model::LoadModel(const std::string* path)
 
 			vertex.lightColor = { 1.0f, 1.0f, 1.0f };
 
-			vertex.lightDir = { 1.0f, 1.0f, 1.0f };
+			vertex.lightDir = { 0.0f, 1.0f, -1.0f };
 
 			// vertex multiplication is necessary for normal
 
@@ -64,4 +67,46 @@ bool Model::LoadModel(const std::string* path)
 		}
 	}
 	return true;
+}
+
+void Model::CreateVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue, VkCommandPool& commandPool)
+{
+	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, vertices.data(), (size_t)bufferSize);
+	vkUnmapMemory(device, stagingBufferMemory);
+
+	Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+
+	Buffer::CopyBuffer(stagingBuffer, vertexBuffer, bufferSize, device, graphicsQueue, commandPool);
+	     
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
+}
+
+void Model::CreateIndexBuffer(VkDevice & device, VkPhysicalDevice & physicalDevice, VkQueue & graphicsQueue, VkCommandPool & commandPool)
+{
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, indices.data(), (size_t)bufferSize);
+	vkUnmapMemory(device, stagingBufferMemory);
+
+	Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+
+	Buffer::CopyBuffer(stagingBuffer, indexBuffer, bufferSize, device, graphicsQueue, commandPool);
+
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
+	vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
