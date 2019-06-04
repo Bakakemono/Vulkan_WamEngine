@@ -51,8 +51,10 @@ bool Model::LoadModel()
 
 			vertex.lightColor = { 1.0f, 1.0f, 1.0f };
 
-			vertex.lightDir = { 0.0f, 1.0f, -1.0f };
+			vertex.lightDir = { -1.0f, 1.0f, -1.0f };
 
+			// TODO : Find a way to like normal with indices and not vertices
+			// Option : generate a normal map
 			// vertex multiplication is necessary for normal
 
 			//if (uniqueVertices.count(vertex) == 0)

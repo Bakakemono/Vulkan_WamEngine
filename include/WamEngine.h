@@ -210,6 +210,7 @@ private:
 	VkSurfaceKHR surface;
 	VkInstance instance;
 	SDL_Event e;
+	InputManager inputManager;
 
 	VkDevice device;
 
@@ -259,9 +260,6 @@ private:
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
 
-	VkImageView textureImageView;
-	VkSampler textureSampler;
-
 	VkImage depthImage;
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
@@ -278,7 +276,6 @@ private:
 	float dt;
 	float lastFrame = 0;
 
-	InputManager inputManager;
 
 	const int HEIGHT = 600;
 	const int WIDTH = 800;
@@ -295,13 +292,11 @@ private:
 	const float CAMERA_SENSITIVITY = 0.5f;
 
 	const glm::vec3 START_POSITION = glm::vec3(0, 0, 0);
-	const glm::vec3 START_FRONT = glm::vec3(0, 0, 1);
-
+	const glm::vec3 START_FRONT = glm::vec3(0, 0, 0);
 
 
 	// MODELS SECTION
 	std::vector<Model> models;
-	std::vector<uint32_t> mipLevels;
 
 	std::vector<std::string> modelsPaths { "models/LightPillar.obj", "models/Ground.obj", "models/StrangeFloatingThing.obj", "models/SkyBox.obj" };
 	std::vector<std::string> texturesPaths{ "textures/LightPillar.png", "textures/Ground.png", "textures/Ground.png", "textures/SkyBox.png" };

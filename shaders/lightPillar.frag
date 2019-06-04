@@ -15,5 +15,5 @@ void main() {
 	vec3 N = normalize(fragNormal);
 	vec3 LDir = normalize(fragLightDir);
 	vec3 light = max(dot(N, LDir), 0.0) * vec3(1.0);
-    outColor = vec4(texture(texSampler, fragTexCoord).rgb, 1.0);
+    outColor = vec4(light * texture(texSampler, fragTexCoord).rgb, 1.0);
 }

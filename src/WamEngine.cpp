@@ -150,8 +150,8 @@ void WamEngine::CleanUpSwapChain()
 	vkDestroyImage(device, depthImage, nullptr);
 	vkFreeMemory(device, depthImageMemory, nullptr);
 
-	for (auto framebuffer : swapChainFrameBuffers) {
-		vkDestroyFramebuffer(device, framebuffer, nullptr);
+	for (auto frameBuffer : swapChainFrameBuffers) {
+		vkDestroyFramebuffer(device, frameBuffer, nullptr);
 	}
 
 	vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
@@ -292,20 +292,16 @@ void WamEngine::UpdateUniformBuffer(uint32_t currentImage)
 	}
 
 	camera.UpdateFront();
-	
-	//FUN HERE
 
 	static auto startTime = std::chrono::high_resolution_clock::now();
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	UniformBufferObject ubo = {};
-	//ubo.model = glm::rotate(glm:: (1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 1.0f));
-	//ubo.model = glm::scale(glm::mat4(1.0f), glm::vec3(2.0, 2.0, 2.0));
 	ubo.model = glm::mat4(1);
-	ubo.model = glm::translate(ubo.model, glm::vec3(0.0f, 0.0f, 0.0f));
-	ubo.model = glm::rotate(ubo.model, time * glm::radians(35.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.model = glm::scale(ubo.model, glm::vec3(1.0f, 1.0f, 1.0f));
+	ubo.model = glm::translate(ubo.model, glm::vec3(15.0f, 0.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, time * glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	ubo.view = glm::lookAt(
 		camera.GetPosition(),
@@ -1255,8 +1251,6 @@ void WamEngine::DrawFrame()
 	else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 		throw std::runtime_error("failed to acquire swap chain image!");
 	}
-
-	//renderNormally
 
 	UpdateUniformBuffer(imageIndex);
 
