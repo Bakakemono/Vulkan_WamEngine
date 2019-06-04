@@ -55,7 +55,6 @@ bool Model::LoadModel()
 
 			// TODO : Find a way to like normal with indices and not vertices
 			// Option : generate a normal map
-			// vertex multiplication is necessary for normal
 
 			//if (uniqueVertices.count(vertex) == 0)
 			//{
@@ -64,6 +63,8 @@ bool Model::LoadModel()
 			//}
 
 			//indices.push_back(uniqueVertices[vertex]);
+
+			// vertex multiplication is necessary for normal
 			vertices.push_back(vertex);
 			indices.push_back(indices.size());
 		}
