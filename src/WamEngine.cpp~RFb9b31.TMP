@@ -15,12 +15,12 @@ void WamEngine::initWindow()
 
 	// Create an application with the following settings:
 	window = SDL_CreateWindow(
-		"Am SDL2 Vulkan window",
-		SDL_WINDOWPOS_UNDEFINED,
-		SDL_WINDOWPOS_UNDEFINED,
-		WIDTH,
-		HEIGHT,
-		SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+		"Am SDL2 Vulkan window",					// window title
+		SDL_WINDOWPOS_UNDEFINED,					// initial x position
+		SDL_WINDOWPOS_UNDEFINED,					// initial y position
+		WIDTH,										// width, in pixels
+		HEIGHT,										// height, in pixels
+		SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE	// flags - 
 	);
 
 	// Check that the window was succesfully created
@@ -169,12 +169,10 @@ void WamEngine::CleanUpSwapChain()
 	}
 
 	vkDestroySwapchainKHR(device, swapChain, nullptr);
-	for (int j = 0; j < models.size(); j++)
-	{
-		for (size_t i = 0; i < swapChainImages.size(); i++) {
-			vkDestroyBuffer(device, uniformBuffers[j][i], nullptr);
-			vkFreeMemory(device, uniformBufferMemory[j][i], nullptr);
-		}
+
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		vkDestroyBuffer(device, uniformBuffers[i], nullptr);
+		vkFreeMemory(device, uniformBufferMemory[i], nullptr);
 	}
 
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
@@ -274,8 +272,7 @@ void WamEngine::GenerateMipmaps(VkImage image, VkFormat imageFormat, uint32_t te
 	EndSingleTimeCommands(commandBuffer);
 }
 
-void WamEngine::
-UpdateUniformBuffer(uint32_t currentImage)
+void WamEngine::UpdateUniformBuffer(uint32_t currentImage)
 {
 	if(inputManager.GetButton(SDLK_w))
 	{
@@ -303,8 +300,12 @@ UpdateUniformBuffer(uint32_t currentImage)
 	UniformBufferObject ubo = {};
 
 	ubo.lightColor = glm::vec4(1, 1, 1, 0);
-	//ubo.lightPos = glm::vec4(sin(time) * 30, 5, cos(time) * 30, 100);
-	ubo.lightPos = glm::vec4(30, 30, 30, 100);
+	ubo.lightPos = glm::vec4(15.0f + sin(time * 4) * 3, 2, 0 + cos(time * 4) * 3, 10);
+
+	ubo.model = glm::mat4(1);
+	ubo.model = glm::translate(ubo.model, glm::vec3(15.0f, 0.0f, 0.0f));
+	//ubo.model = glm::rotate(ubo.model, time * glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::scale(ubo.model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 	ubo.view = glm::lookAt(
 		camera.GetPosition(),
@@ -314,19 +315,10 @@ UpdateUniformBuffer(uint32_t currentImage)
 	ubo.proj = glm::perspective(camera.GetFOV(), swapChainExtent.width / (float)swapChainExtent.height, camera.GetNear(), camera.GetFar());
 	ubo.proj[1][1] *= -1;
 
-	for(int i = 0; i < models.size(); i++)
-	{
-		ubo.model = glm::mat4(1);
-		ubo.model = glm::translate(ubo.model, modelsPosition[i]);
-		ubo.model = glm::scale(ubo.model, modelsScale[i]);
-
-
-
-		void* data;
-		vkMapMemory(device, uniformBufferMemory[i][currentImage], 0, sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, uniformBufferMemory[i][currentImage]);
-	}
+	void* data;
+	vkMapMemory(device, uniformBufferMemory[currentImage], 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(device, uniformBufferMemory[currentImage]);
 }
 
 VkSampleCountFlagBits WamEngine::GetMaxUsableSampleCount()
@@ -586,41 +578,6 @@ bool WamEngine::checkDeviceExtensionSupport(VkPhysicalDevice device)
 	}
 
 	return requiredExtensions.empty();
-}
-
-void WamEngine::UpdateDescriptorSets(int modelIndex)
-{
-	for (size_t i = 0; i < swapChainImages.size(); i++) {
-		VkDescriptorBufferInfo bufferInfo = {};
-		bufferInfo.buffer = uniformBuffers[modelIndex][i];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
-
-		VkDescriptorImageInfo imageInfo = {};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView = models[modelIndex].textureImageView;
-		imageInfo.sampler = models[modelIndex].textureSampler;
-
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
-
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSets[i];
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSets[i];
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pImageInfo = &imageInfo;
-
-		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-	}
 }
 
 SwapChainSupportDetails WamEngine::QuerySwapChainSupport(VkPhysicalDevice device)
@@ -923,6 +880,25 @@ void WamEngine::CreateGraphicsPipeline()
 	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipelines.strangeCube) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
+
+
+	shaderStages[0] = LoadShader("shaders/skyBox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = LoadShader("shaders/skyBox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	std::array<VkVertexInputAttributeDescription, 2> skyBoxAttributeDescriptions = {};
+
+	skyBoxAttributeDescriptions[0].binding = 0;
+	skyBoxAttributeDescriptions[0].location = 0;
+	skyBoxAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	skyBoxAttributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+	skyBoxAttributeDescriptions[0].binding = 0;
+	skyBoxAttributeDescriptions[0].location = 1;
+	skyBoxAttributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+	skyBoxAttributeDescriptions[0].offset = offsetof(Vertex, texCoord);
+
+	vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(skyBoxAttributeDescriptions.size());
+	vertexInputInfo.pVertexAttributeDescriptions = skyBoxAttributeDescriptions.data();
 
 	rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 	depthStencil.depthWriteEnable = VK_FALSE;
@@ -1244,23 +1220,17 @@ void WamEngine::CreateCommandBuffers()
 
 		vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+		vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelines.lightPillar);
 
+		VkBuffer vertexBuffers[] = { models[0].vertexBuffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-		for(int j = 0; j < models.size(); j++)
-		{
-			UpdateDescriptorSets(j);
-			vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+		vkCmdBindIndexBuffer(commandBuffers[i], models[0].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *(models[j].pipeline));
+		vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 
-			VkBuffer vertexBuffers[]{ models[j].vertexBuffer };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
-
-			vkCmdBindIndexBuffer(commandBuffers[i], models[j].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(models[j].indices.size()), 1, 0, 0, 0);
-		}
+		vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(models[0].indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1431,19 +1401,13 @@ VkShaderModule WamEngine::CreateShaderModule(const std::vector<char>& code)
 
 void WamEngine::CreateUniformBuffers()
 {
-	for(int i = 0; i < models.size(); i++)
-	{
-		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-		uniformBuffers.resize(i + 1);
-		uniformBufferMemory.resize(i + 1);
+	uniformBuffers.resize(swapChainImages.size());
+	uniformBufferMemory.resize(swapChainImages.size());
 
-		uniformBuffers[i].resize(swapChainImages.size());
-		uniformBufferMemory[i].resize(swapChainImages.size());
-
-		for (size_t j = 0; j < swapChainImages.size(); j++) {
-			Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i][j], uniformBufferMemory[i][j]);
-		}
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		Buffer::CreateBuffer(device, physicalDevice, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBufferMemory[i]);
 	}
 }
 
@@ -1479,6 +1443,38 @@ void WamEngine::CreateDescriptorSets()
 	descriptorSets.resize(swapChainImages.size());
 	if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate descriptor sets!");
+	}
+
+	for (size_t i = 0; i < swapChainImages.size(); i++) {
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = uniformBuffers[i];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		VkDescriptorImageInfo imageInfo = {};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = models[0].textureImageView;
+		imageInfo.sampler = models[0].textureSampler;
+
+		std::array<VkWriteDescriptorSet, 2> descriptorWrites = {};
+
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = descriptorSets[i];
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[1].dstSet = descriptorSets[i];
+		descriptorWrites[1].dstBinding = 1;
+		descriptorWrites[1].dstArrayElement = 0;
+		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrites[1].descriptorCount = 1;
+		descriptorWrites[1].pImageInfo = &imageInfo;
+
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 }
 
@@ -1669,6 +1665,7 @@ void WamEngine::RecreateSwapChain()
 	CreateFrameBuffers();
 	CreateUniformBuffers();
 	CreateDescriptorPool();
+	CreateDescriptorSets();
 	CreateCommandBuffers();
 }
 

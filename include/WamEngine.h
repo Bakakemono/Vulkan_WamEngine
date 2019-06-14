@@ -23,6 +23,7 @@
 #include <valarray>
 #include <map>
 #include <string>
+#include <math.h>
 
 
 #include <input..h>
@@ -36,9 +37,11 @@
 
 struct UniformBufferObject
 {
-	alignas(16) glm::mat4 model;
-	alignas(16) glm::mat4 view;
-	alignas(16) glm::mat4 proj;
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+	glm::vec4 lightPos;
+	glm::vec4 lightColor;
 };
 
 struct QueueFamilyIndices {
@@ -81,6 +84,8 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
+
+
 class WamEngine
 {
 public:
@@ -122,6 +127,8 @@ private:
 	std::vector<const char*> GetRequiredExtensions();
 	bool IsDeviceSuitable(VkPhysicalDevice device);
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+
+	void UpdateDescriptorSets(int modelIndex);
 
 	void DrawFrame();
 
@@ -254,8 +261,8 @@ private:
 
 	bool frameBufferResized = false;
 
-	std::vector<VkBuffer> uniformBuffers;
-	std::vector<VkDeviceMemory> uniformBufferMemory;
+	std::vector <std::vector<VkBuffer>> uniformBuffers;
+	std::vector <std::vector<VkDeviceMemory>> uniformBufferMemory;
 
 	VkDescriptorPool descriptorPool;
 	std::vector<VkDescriptorSet> descriptorSets;
@@ -294,12 +301,17 @@ private:
 	const glm::vec3 START_POSITION = glm::vec3(0, 0, 0);
 	const glm::vec3 START_FRONT = glm::vec3(0, 0, 0);
 
-
 	// MODELS SECTION
 	std::vector<Model> models;
 
-	std::vector<std::string> modelsPaths { "models/LightPillar.obj", "models/Ground.obj", "models/StrangeFloatingThing.obj", "models/SkyBox.obj" };
-	std::vector<std::string> texturesPaths{ "textures/LightPillar.png", "textures/Ground.png", "textures/Ground.png", "textures/SkyBox.png" };
+	std::vector<std::string> modelsPaths { "models/lightPillar.obj", "models/Ground.obj", "models/StrangeFloatingThing.obj", "models/SkyBox.obj" };
+	std::vector<std::string> texturesPaths{ "textures/lightPillar.png", "textures/Ground.png", "textures/StrangeFloatingThing.png", "textures/SkyBox.png" };
+
+	std::vector<glm::vec3> modelsPosition{ glm::vec3(0, 0, 0), glm::vec3(30, 0, 0), glm::vec3(60, 0, 0), glm::vec3(90, 0, 0) };
+	std::vector<glm::vec3> modelsScale{ glm::vec3(1, 1, 1), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1) };
+
+	std::vector<UniformBufferObject> UBOs;
+
 
 	bool quit = false;
 };

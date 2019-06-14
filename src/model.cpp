@@ -10,7 +10,7 @@ Model::Model(const std::string path, VkPipeline* pipeline, VkDevice& device, VkP
 	CreateIndexBuffer(device, physicalDevice, graphicQueue, commandPool);
 }
 
-bool Model::LoadModel()
+void Model::LoadModel()
 {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
@@ -18,7 +18,6 @@ bool Model::LoadModel()
 	std::string warn, err;
 
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str())) {
-		return false;
 		throw std::runtime_error(warn + err);
 	}
 	std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
@@ -47,12 +46,6 @@ bool Model::LoadModel()
 				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
 			};
 
-			vertex.color = { 1.0f, 1.0f, 1.0f };
-
-			vertex.lightColor = { 1.0f, 1.0f, 1.0f };
-
-			vertex.lightDir = { -1.0f, 1.0f, -1.0f };
-
 			// TODO : Find a way to like normal with indices and not vertices
 			// Option : generate a normal map
 
@@ -69,7 +62,6 @@ bool Model::LoadModel()
 			indices.push_back(indices.size());
 		}
 	}
-	return true;
 }
 
 void Model::CreateVertexBuffer(VkDevice& device, VkPhysicalDevice& physicalDevice, VkQueue& graphicsQueue, VkCommandPool& commandPool)

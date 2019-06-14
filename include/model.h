@@ -25,11 +25,8 @@
 
 struct Vertex {
 	glm::vec3 pos;
-	glm::vec3 color;
 	glm::vec2 texCoord;
-	glm::vec3 lightColor;
 	glm::vec3 normal;
-	glm::vec3 lightDir;
 
 	static std::array<VkVertexInputBindingDescription, 1> getBindingDescriptions()
 	{
@@ -41,8 +38,8 @@ struct Vertex {
 
 		return bindingDescriptions;
 	}
-	static std::array<VkVertexInputAttributeDescription, 6> getAttributeDescriptions() {
-		std::array<VkVertexInputAttributeDescription, 6> attributeDescriptions = {};
+	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+		std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
 
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
@@ -50,42 +47,27 @@ struct Vertex {
 		attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
 		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof(Vertex, color);
+		attributeDescriptions[1].location = 1,
+		attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof(Vertex, texCoord);
 
 		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2,
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof(Vertex, lightColor);
-
-		attributeDescriptions[4].binding = 0;
-		attributeDescriptions[4].location = 4;
-		attributeDescriptions[4].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[4].offset = offsetof(Vertex, normal);
-
-		attributeDescriptions[5].binding = 0;
-		attributeDescriptions[5].location = 5;
-		attributeDescriptions[5].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[5].offset = offsetof(Vertex, lightDir);
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof(Vertex, normal);
 
 		return attributeDescriptions;
 	}
 
 	bool operator==(const Vertex& other) const
 	{
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+		return pos == other.pos && normal == other.normal && texCoord == other.texCoord;
 	}
 };
 
 template<> struct std::hash<Vertex> {
 	size_t operator()(Vertex const& vertex) const {
-		return ((std::hash<glm::vec3>()(vertex.pos) ^ (std::hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^ (std::hash<glm::vec2>()(vertex.texCoord) << 1);
+		return ((std::hash<glm::vec3>()(vertex.pos) ^ (std::hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^ (std::hash<glm::vec2>()(vertex.texCoord) << 1);
 	}
 };
 
@@ -117,7 +99,7 @@ public:
 	VkPipeline* pipeline;
 
 private:
-	bool LoadModel();
+	void LoadModel();
 	void CreateVertexBuffer(
 		VkDevice& device,
 		VkPhysicalDevice& physicalDevice,
