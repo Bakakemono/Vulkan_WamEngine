@@ -29,6 +29,7 @@
 #include <input..h>
 #include <model.h>
 #include <camera.h>
+#include <pipeline.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -42,6 +43,8 @@ struct UniformBufferObject
 	glm::mat4 proj;
 	glm::vec4 lightPos;
 	glm::vec4 lightColor;
+	glm::vec4 viewPos;
+	glm::vec4 specular;
 };
 
 struct QueueFamilyIndices {
@@ -68,15 +71,6 @@ const std::vector<const char*> deviceExtensions =
 {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
-
-struct Pipeline
-{
-	VkPipeline lightPillar;
-	VkPipeline ground;
-	VkPipeline strangeCube;
-	VkPipeline skyBox;
-};
-
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -212,6 +206,13 @@ private:
 
 	VkPipelineShaderStageCreateInfo LoadShader(std::string shaderPath, VkShaderStageFlagBits shaderTypeFlag);
 
+
+	void AddGround(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+	void AddStrangeCube(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+	void AddLightPillar(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+	void AddSteps(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+	void AddEntrance(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+
 	// Variables :
 	SDL_Window* window;
 	VkSurfaceKHR surface;
@@ -241,8 +242,6 @@ private:
 	std::vector<VkShaderModule> shaderModules;
 	
 	VkRenderPass renderPass;
-
-	Pipeline graphicsPipelines;
 
 	VkCommandPool commandPool;
 	std::vector<VkCommandBuffer> commandBuffers;
@@ -277,6 +276,9 @@ private:
 	VkDeviceMemory colorImageMemory;
 	VkImageView colorImageView;
 
+
+	PipelineManager pipelineManager;
+
 	// CAMERA SECTION
 	Camera camera;
 
@@ -301,16 +303,23 @@ private:
 	const glm::vec3 START_POSITION = glm::vec3(0, 0, 0);
 	const glm::vec3 START_FRONT = glm::vec3(0, 0, 0);
 
+	bool moveMouse = false;
+
 	// MODELS SECTION
 	std::vector<Model> models;
 
-	std::vector<std::string> modelsPaths { "models/lightPillar.obj", "models/Ground.obj", "models/StrangeFloatingThing.obj", "models/SkyBox.obj" };
-	std::vector<std::string> texturesPaths{ "textures/lightPillar.png", "textures/Ground.png", "textures/StrangeFloatingThing.png", "textures/SkyBox.png" };
-
-	std::vector<glm::vec3> modelsPosition{ glm::vec3(0, 0, 0), glm::vec3(30, 0, 0), glm::vec3(60, 0, 0), glm::vec3(90, 0, 0) };
-	std::vector<glm::vec3> modelsScale{ glm::vec3(1, 1, 1), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1), glm::vec3(1, 1, 1) };
+	std::vector<std::string> modelsPaths;
+	std::vector<std::string> texturesPaths;
+	std::vector<MODEL::Type> modelsType;
+	std::vector<glm::vec3> modelsPosition;
+	std::vector<glm::vec3> modelsScale;
+	std::vector<glm::vec3> modelsRotation;
+	
 
 	std::vector<UniformBufferObject> UBOs;
+
+	const glm::vec4 SPECULAR_WOOD{ 0.3f, 16.0f, 0, 0 };
+	const glm::vec4 SPECULAR_SHINY{ 0.7f, 4.0f, 0, 0 };
 
 
 	bool quit = false;

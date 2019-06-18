@@ -22,6 +22,19 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/hash.hpp>
 
+namespace MODEL
+{
+	enum Type
+	{
+		GROUND,
+		LIGHT_PILLAR,
+		FENCE,
+		STRANGE_CUBE,
+		STEPS,
+		ENTRANCE,
+		SKY_BOX
+	};
+}
 
 struct Vertex {
 	glm::vec3 pos;

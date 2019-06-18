@@ -156,10 +156,8 @@ void WamEngine::CleanUpSwapChain()
 
 	vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
-	vkDestroyPipeline(device, graphicsPipelines.lightPillar, nullptr);
-	vkDestroyPipeline(device, graphicsPipelines.ground, nullptr);
-	vkDestroyPipeline(device, graphicsPipelines.strangeCube, nullptr);
-	vkDestroyPipeline(device, graphicsPipelines.skyBox, nullptr);
+	vkDestroyPipeline(device, pipelineManager.modelPipeline, nullptr);
+	vkDestroyPipeline(device, pipelineManager.skyBoxPipeline, nullptr);
 
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 	vkDestroyRenderPass(device, renderPass, nullptr);
@@ -294,7 +292,15 @@ UpdateUniformBuffer(uint32_t currentImage)
 		camera.GoRight(dt);
 	}
 
-	camera.UpdateFront();
+	if(inputManager.GetButton(SDLK_y))
+	{
+		moveMouse = true;
+	}
+	if (inputManager.GetButton(SDLK_x))
+	{
+		moveMouse = false;
+	}
+	camera.UpdateFront(moveMouse);
 
 	static auto startTime = std::chrono::high_resolution_clock::now();
 	auto currentTime = std::chrono::high_resolution_clock::now();
@@ -303,24 +309,48 @@ UpdateUniformBuffer(uint32_t currentImage)
 	UniformBufferObject ubo = {};
 
 	ubo.lightColor = glm::vec4(1, 1, 1, 0);
-	//ubo.lightPos = glm::vec4(sin(time) * 30, 5, cos(time) * 30, 100);
-	ubo.lightPos = glm::vec4(30, 30, 30, 100);
+	//ubo.lightPos = glm::vec4(sin(time / 3) * 300, 100, cos(time / 3) * 300, 100);
+	ubo.lightPos = glm::vec4(6, 8, 6, 5);
 
 	ubo.view = glm::lookAt(
 		camera.GetPosition(),
 		camera.GetPosition() + camera.GetFront(),
 		camera.UP
 	);
+
 	ubo.proj = glm::perspective(camera.GetFOV(), swapChainExtent.width / (float)swapChainExtent.height, camera.GetNear(), camera.GetFar());
 	ubo.proj[1][1] *= -1;
 
+	ubo.viewPos = glm::vec4(camera.GetPosition(), 1.0f);
 	for(int i = 0; i < models.size(); i++)
 	{
 		ubo.model = glm::mat4(1);
-		ubo.model = glm::translate(ubo.model, modelsPosition[i]);
-		ubo.model = glm::scale(ubo.model, modelsScale[i]);
 
+		if(modelsType[i] == MODEL::SKY_BOX)
+		{
+			ubo.model = glm::translate(ubo.model, camera.GetPosition() - glm::vec3(0, 5, 0));
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].x), glm::vec3(1, 0, 0));
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].y), glm::vec3(0, 1, 0));
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].z), glm::vec3(0, 0, 1));
+			ubo.model = glm::scale(ubo.model, modelsScale[i]);
+		}
+		else
+		{
+			ubo.model = glm::translate(ubo.model, modelsPosition[i]);
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].x), glm::vec3(1, 0, 0));
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].y), glm::vec3(0, 1, 0));
+			ubo.model = glm::rotate(ubo.model, glm::radians(modelsRotation[i].z), glm::vec3(0, 0, 1));
+			ubo.model = glm::scale(ubo.model, modelsScale[i]);
+		}
 
+		if(modelsType[i] == MODEL::STRANGE_CUBE)
+		{
+			ubo.specular = SPECULAR_SHINY;
+		}
+		else
+		{
+			ubo.specular = SPECULAR_WOOD;
+		}
 
 		void* data;
 		vkMapMemory(device, uniformBufferMemory[i][currentImage], 0, sizeof(ubo), 0, &data);
@@ -901,33 +931,20 @@ void WamEngine::CreateGraphicsPipeline()
 	pipelineInfo.pStages = shaderStages.data();
 
 
-	shaderStages[0] = LoadShader("shaders/ground.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = LoadShader("shaders/ground.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[0] = LoadShader("shaders/model.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = LoadShader("shaders/model.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipelines.ground) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create graphics pipeline!");
-	}
-
-
-	shaderStages[0] = LoadShader("shaders/lightPillar.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = LoadShader("shaders/lightPillar.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipelines.lightPillar) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create graphics pipeline!");
-	}
-
-
-	shaderStages[0] = LoadShader("shaders/strangeCube.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = LoadShader("shaders/strangeCube.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipelines.strangeCube) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineManager.modelPipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
 	rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 	depthStencil.depthWriteEnable = VK_FALSE;
 
-	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipelines.skyBox) != VK_SUCCESS) {
+	shaderStages[0] = LoadShader("shaders/skyBox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = LoadShader("shaders/skyBox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipelineManager.skyBoxPipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 
@@ -1197,12 +1214,138 @@ void WamEngine::CreateTextureSampler()
 
 void WamEngine::LoadModel()
 {
-	std::vector<VkPipeline*> modelPipelines = { &graphicsPipelines.lightPillar, &graphicsPipelines.ground, &graphicsPipelines.strangeCube, &graphicsPipelines.skyBox };
-	for (int i = 0; i < modelsPaths.size(); i++)
-	{
-		models.push_back(Model(modelsPaths[i], modelPipelines[i], device, physicalDevice, graphicsQueue, commandPool));
-	}
 
+	// ground part
+	AddGround(glm::vec3(0, 0, 0), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(0, 0, 4), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(0, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(0, 0, 12), glm::vec3(0.1f), glm::vec3(0));
+
+	AddGround(glm::vec3(4, 0, 0), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(4, 0, 4), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(4, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(4, 0, 12), glm::vec3(0.1f), glm::vec3(0));
+
+	AddGround(glm::vec3(8, 0, 0), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(8, 0, 4), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(8, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(8, 0, 12), glm::vec3(0.1f), glm::vec3(0));
+
+	AddGround(glm::vec3(12, 0, 0), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(12, 0, 4), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(12, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	AddGround(glm::vec3(12, 0, 12), glm::vec3(0.1f), glm::vec3(0));
+
+	//Wall left
+	AddGround(glm::vec3(-2.6f, 2.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 2.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 2.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 2.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+
+	AddGround(glm::vec3(-2.6f, 6.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 6.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 6.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 6.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+
+	AddGround(glm::vec3(-2.6f, 10.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 10.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 10.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 10.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+
+	AddGround(glm::vec3(-2.6f, 14.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 14.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 14.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+	AddGround(glm::vec3(-2.6f, 14.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, -90));
+
+	//Wall right
+	AddGround(glm::vec3(14.6f, 2.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 2.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 2.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 2.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+						
+	AddGround(glm::vec3(14.6f, 6.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 6.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 6.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 6.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+						
+	AddGround(glm::vec3(14.6f, 10.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 10.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 10.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 10.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+						
+	AddGround(glm::vec3(14.6f, 14.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 14.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 14.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	AddGround(glm::vec3(14.6f, 14.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+
+	//wall back
+	AddGround(glm::vec3( 0 , 2.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 4 , 2.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 8 , 2.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 12, 2.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+																	   	   
+	AddGround(glm::vec3( 0, 6.6f, -2.6f), glm::vec3(0.1f),   glm::vec3(90, 0, 0));
+	//AddGround(glm::vec3( 4, 6.6f, -2.6f), glm::vec3(0.1f),   glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 8, 6.6f, -2.6f), glm::vec3(0.1f),   glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 12, 6.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+																	   	   
+	AddGround(glm::vec3( 0, 10.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	//AddGround(glm::vec3( 4, 10.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 8, 10.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 12, 10.6f, -2.6f), glm::vec3(0.1f), glm::vec3(90, 0, 0));
+																	   	   
+	AddGround(glm::vec3( 0, 14.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 4, 14.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 8, 14.6f, -2.6f), glm::vec3(0.1f),  glm::vec3(90, 0, 0));
+	AddGround(glm::vec3( 12, 14.6f, -2.6f), glm::vec3(0.1f), glm::vec3(90, 0, 0));
+
+	//wall front
+	AddGround(glm::vec3(0, 2.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(4, 2.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(8, 2.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(12, 2.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+
+	AddGround(glm::vec3(0, 6.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(4, 6.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(8, 6.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(12, 6.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+
+	AddGround(glm::vec3(0, 10.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(4, 10.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(8, 10.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(12, 10.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+
+	AddGround(glm::vec3(0, 14.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(4, 14.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(8, 14.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+	AddGround(glm::vec3(12, 14.6f, 14.6f), glm::vec3(0.1f), glm::vec3(-90, 0, 0));
+
+	// ground Up
+	AddGround(glm::vec3(0, 17.2f, 0), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(0, 17.2f, 4), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(0, 17.2f, 8), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(0, 17.2f, 12), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+						   
+	AddGround(glm::vec3(4, 17.2f, 0), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(4, 17.2f, 4), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(4, 17.2f, 8), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(4, 17.2f, 12), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+						   
+	AddGround(glm::vec3(8, 17.2f, 0), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(8, 17.2f, 4), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(8, 17.2f, 8), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(8, 17.2f, 12), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+
+	AddGround(glm::vec3(12, 17.2f, 0), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(12, 17.2f, 4), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(12, 17.2f, 8), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+	AddGround(glm::vec3(12, 17.2f, 12), glm::vec3(0.1f), glm::vec3(180, 0, 0));
+							  
+
+	AddSteps(glm::vec3(4, 0.6f, 0.2f), glm::vec3(0.1f), glm::vec3(0, 0, 0));
+	AddEntrance(glm::vec3(4, 4.6f, -2.3), glm::vec3(0.1f), glm::vec3(0, 0, 0));
+
+	AddLightPillar(glm::vec3(12, 0.6f, 12), glm::vec3(0.1f), glm::vec3(0));
 }
 
 void WamEngine::CreateCommandBuffers()
@@ -1246,20 +1389,21 @@ void WamEngine::CreateCommandBuffers()
 
 
 
-		for(int j = 0; j < models.size(); j++)
+		for(int modelIndex = 0; modelIndex < models.size(); modelIndex++)
 		{
-			UpdateDescriptorSets(j);
+			UpdateDescriptorSets(modelIndex);
+
 			vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 
-			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *(models[j].pipeline));
+			vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, *(models[modelIndex].pipeline));
 
-			VkBuffer vertexBuffers[]{ models[j].vertexBuffer };
+			VkBuffer vertexBuffers[]{ models[modelIndex].vertexBuffer };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-			vkCmdBindIndexBuffer(commandBuffers[i], models[j].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(commandBuffers[i], models[modelIndex].indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(models[j].indices.size()), 1, 0, 0, 0);
+			vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(models[modelIndex].indices.size()), 1, 0, 0, 0);
 		}
 
 		vkCmdEndRenderPass(commandBuffers[i]);
@@ -1669,6 +1813,7 @@ void WamEngine::RecreateSwapChain()
 	CreateFrameBuffers();
 	CreateUniformBuffers();
 	CreateDescriptorPool();
+	CreateDescriptorSets();
 	CreateCommandBuffers();
 }
 
@@ -1848,4 +1993,65 @@ VkPipelineShaderStageCreateInfo WamEngine::LoadShader(std::string shaderPath, Vk
 	shaderModules.push_back(shadermodule);
 
 	return shaderStage;
+}
+
+void WamEngine::AddGround(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/Ground.obj");
+	texturesPaths.push_back("textures/Ground.png");
+	modelsType.push_back(MODEL::GROUND);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/Ground.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
+}
+
+void WamEngine::AddStrangeCube(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/StrangeFloatingThing.obj");
+	texturesPaths.push_back("textures/StrangeFloatingThing.png");
+	modelsType.push_back(MODEL::STRANGE_CUBE);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/StrangeFloatingThing.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
+}
+
+void WamEngine::AddLightPillar(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/LightPillar.obj");
+	texturesPaths.push_back("textures/LightPillar.png");
+	modelsType.push_back(MODEL::STRANGE_CUBE);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/LightPillar.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
+
+}
+
+void WamEngine::AddSteps(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/Step.obj");
+	texturesPaths.push_back("textures/Step.png");
+	modelsType.push_back(MODEL::STEPS);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/Step.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
+}
+
+void WamEngine::AddEntrance(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/Entrance.obj");
+	texturesPaths.push_back("textures/Entrance.png");
+	modelsType.push_back(MODEL::STEPS);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/Entrance.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
 }

@@ -24,7 +24,7 @@ public:
 	void GoLeft(float& deltaTime);
 	void GoRight(float& deltaTime);
 
-	void UpdateFront();
+	void UpdateFront(bool MoveMouse);
 
 	float GetFOV();
 

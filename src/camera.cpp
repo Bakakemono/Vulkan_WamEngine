@@ -52,8 +52,16 @@ void Camera::GoRight(float& deltaTime)
 	cameraPos += glm::normalize(glm::cross(frontPos, UP)) * speed * deltaTime;
 }
 
-void Camera::UpdateFront()
+void Camera::UpdateFront(bool MoveMouse)
 {
+	if (MoveMouse)
+	{
+		ShowCursor(TRUE);
+		return;
+	}
+	ShowCursor(false);
+
+
 	GetCursorPos(&mousePosition);
 
 	xOffset = mousePosition.x - screenCenterX;
