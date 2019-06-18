@@ -32,6 +32,7 @@ namespace MODEL
 		STRANGE_CUBE,
 		STEPS,
 		ENTRANCE,
+		BLACK_BOX,
 		SKY_BOX
 	};
 }

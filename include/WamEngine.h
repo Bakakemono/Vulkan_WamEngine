@@ -212,6 +212,7 @@ private:
 	void AddLightPillar(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
 	void AddSteps(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
 	void AddEntrance(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
+	void AddBlackBox(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation);
 
 	// Variables :
 	SDL_Window* window;
@@ -318,8 +319,8 @@ private:
 
 	std::vector<UniformBufferObject> UBOs;
 
-	const glm::vec4 SPECULAR_WOOD{ 0.3f, 16.0f, 0, 0 };
-	const glm::vec4 SPECULAR_SHINY{ 0.7f, 4.0f, 0, 0 };
+	const glm::vec4 SPECULAR_WOOD{ 0.2f, 32.0f, 0, 0 };
+	const glm::vec4 SPECULAR_SHINY{ 0.9f, 2.0f, 0, 0 };
 
 
 	bool quit = false;

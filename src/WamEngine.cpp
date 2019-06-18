@@ -302,15 +302,17 @@ UpdateUniformBuffer(uint32_t currentImage)
 	}
 	camera.UpdateFront(moveMouse);
 
-	static auto startTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+	//static auto startTime = std::chrono::high_resolution_clock::now();
+	//auto currentTime = std::chrono::high_resolution_clock::now();
+	//float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
 	UniformBufferObject ubo = {};
 
 	ubo.lightColor = glm::vec4(1, 1, 1, 0);
 	//ubo.lightPos = glm::vec4(sin(time / 3) * 300, 100, cos(time / 3) * 300, 100);
-	ubo.lightPos = glm::vec4(6, 8, 6, 5);
+	ubo.lightPos = glm::vec4(6, 6, 6, 5);
+	//ubo.lightPos = glm::vec4(camera.GetPosition(), 5);
+
 
 	ubo.view = glm::lookAt(
 		camera.GetPosition(),
@@ -1223,12 +1225,12 @@ void WamEngine::LoadModel()
 
 	AddGround(glm::vec3(4, 0, 0), glm::vec3(0.1f), glm::vec3(0));
 	AddGround(glm::vec3(4, 0, 4), glm::vec3(0.1f), glm::vec3(0));
-	AddGround(glm::vec3(4, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	//AddGround(glm::vec3(4, 0, 8), glm::vec3(0.1f), glm::vec3(0));
 	AddGround(glm::vec3(4, 0, 12), glm::vec3(0.1f), glm::vec3(0));
 
 	AddGround(glm::vec3(8, 0, 0), glm::vec3(0.1f), glm::vec3(0));
 	AddGround(glm::vec3(8, 0, 4), glm::vec3(0.1f), glm::vec3(0));
-	AddGround(glm::vec3(8, 0, 8), glm::vec3(0.1f), glm::vec3(0));
+	//AddGround(glm::vec3(8, 0, 8), glm::vec3(0.1f), glm::vec3(0));
 	AddGround(glm::vec3(8, 0, 12), glm::vec3(0.1f), glm::vec3(0));
 
 	AddGround(glm::vec3(12, 0, 0), glm::vec3(0.1f), glm::vec3(0));
@@ -1269,8 +1271,8 @@ void WamEngine::LoadModel()
 	AddGround(glm::vec3(14.6f, 6.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
 						
 	AddGround(glm::vec3(14.6f, 10.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
-	AddGround(glm::vec3(14.6f, 10.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
-	AddGround(glm::vec3(14.6f, 10.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	//AddGround(glm::vec3(14.6f, 10.6f, 4), glm::vec3(0.1f), glm::vec3(0, 0, 90));
+	//AddGround(glm::vec3(14.6f, 10.6f, 8), glm::vec3(0.1f), glm::vec3(0, 0, 90));
 	AddGround(glm::vec3(14.6f, 10.6f, 12), glm::vec3(0.1f), glm::vec3(0, 0, 90));
 						
 	AddGround(glm::vec3(14.6f, 14.6f, 0), glm::vec3(0.1f), glm::vec3(0, 0, 90));
@@ -1340,12 +1342,33 @@ void WamEngine::LoadModel()
 	AddGround(glm::vec3(12, 17.2f, 4), glm::vec3(0.1f), glm::vec3(180, 0, 0));
 	AddGround(glm::vec3(12, 17.2f, 8), glm::vec3(0.1f), glm::vec3(180, 0, 0));
 	AddGround(glm::vec3(12, 17.2f, 12), glm::vec3(0.1f), glm::vec3(180, 0, 0));
-							  
 
+	//first StepsGroup
 	AddSteps(glm::vec3(4, 0.6f, 0.2f), glm::vec3(0.1f), glm::vec3(0, 0, 0));
 	AddEntrance(glm::vec3(4, 4.6f, -2.3), glm::vec3(0.1f), glm::vec3(0, 0, 0));
+	AddGround(glm::vec3(4, 4, -4.6f), glm::vec3(0.1f), glm::vec3(0, 0, 0));
+	AddBlackBox(glm::vec3(4, 4.6f, -4.6f), glm::vec3(0.1f), glm::vec3(0, 0, 0));
+	AddLightPillar(glm::vec3(4, 4.6f, -4.6f), glm::vec3(0.1f), glm::vec3(0, 0, 0));
 
-	AddLightPillar(glm::vec3(12, 0.6f, 12), glm::vec3(0.1f), glm::vec3(0));
+	//second StepsGroup
+	AddSteps(glm::vec3(11.8f, 10.6f, -2.0f), glm::vec3(0.1f), glm::vec3(90, -90, 0));
+	AddEntrance(glm::vec3(14.3f, 10.6f, 2), glm::vec3(0.1f), glm::vec3(90, 90, 0));
+	AddGround(glm::vec3(16.6f, 10.6f, 1.4f), glm::vec3(0.1f), glm::vec3(90, -90, 0));
+	AddBlackBox(glm::vec3(16.6f, 10.6f, 2.0f), glm::vec3(0.1f), glm::vec3(90, -90, 0));
+	AddLightPillar(glm::vec3(16.6f, 10.6f, 2.0f), glm::vec3(0.1f), glm::vec3(90, -90, 0));
+
+	//third StepsGroup
+	AddSteps(glm::vec3(14.0f, 2.8f, 8.0f), glm::vec3(0.1f), glm::vec3(-90, 0, 90));
+	AddEntrance(glm::vec3(10, 0.3f, 8), glm::vec3(0.1f), glm::vec3(-90, 0, 90));
+	AddGround(glm::vec3(10.6f, -2.0f, 8), glm::vec3(0.1f), glm::vec3(-90, 0, 90));
+	AddBlackBox(glm::vec3(10.6f, -2.0f, 8), glm::vec3(0.1f), glm::vec3(-90, 0, 90));
+	AddLightPillar(glm::vec3(10.6f, -2.0f, 8), glm::vec3(0.1f), glm::vec3(-90, 0, 90));
+
+	AddStrangeCube(glm::vec3(10, 8, 9), glm::vec3(0.05f), glm::vec3(44, 35, 180));
+	AddStrangeCube(glm::vec3(2, 10, 5), glm::vec3(0.08f), glm::vec3(22, 12, 19));
+	AddStrangeCube(glm::vec3(6, 4.1f, 3), glm::vec3(0.03f), glm::vec3(22, 12, 19));
+	AddStrangeCube(glm::vec3(6, 7.3f, 10), glm::vec3(0.1f), glm::vec3(22, 12, 19));
+
 }
 
 void WamEngine::CreateCommandBuffers()
@@ -2054,4 +2077,16 @@ void WamEngine::AddEntrance(glm::vec3 position, glm::vec3 scale, glm::vec3 rotat
 	modelsRotation.push_back(rotation);
 
 	models.push_back(Model("models/Entrance.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
+}
+
+void WamEngine::AddBlackBox(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation)
+{
+	modelsPaths.push_back("models/BlackBox.obj");
+	texturesPaths.push_back("textures/BlackBox.png");
+	modelsType.push_back(MODEL::BLACK_BOX);
+	modelsPosition.push_back(position);
+	modelsScale.push_back(scale);
+	modelsRotation.push_back(rotation);
+
+	models.push_back(Model("models/BlackBox.obj", &pipelineManager.modelPipeline, device, physicalDevice, graphicsQueue, commandPool));
 }
